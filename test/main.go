@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-  db := nabu.DB()
+  db := nabu.DB([]string{"x:1", "x:2", "x:3", "x:4"})
   for i := 0; i < 250000; i++ {
     var indexes []string
     for j := 1; j < 5; j++ {

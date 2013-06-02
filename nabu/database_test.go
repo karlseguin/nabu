@@ -6,7 +6,7 @@ import (
 
 func TestIndexesAResource(t *testing.T) {
   spec := Spec(t)
-  db := DB()
+  db := DB([]string{"x1", "x2"})
   resource := newFakeResource("1", "x1", "x2")
   db.Update(resource)
   assertDBIndex(spec, db, "x1", resource)
@@ -16,7 +16,7 @@ func TestIndexesAResource(t *testing.T) {
 
 func TestRemovesAResource(t *testing.T) {
   spec := Spec(t)
-  db := DB()
+  db := DB([]string{"x1", "x2"})
   resource := newFakeResource("1", "x1", "x2")
   db.Update(resource)
   db.Remove(resource.GetId())
@@ -27,7 +27,7 @@ func TestRemovesAResource(t *testing.T) {
 
 func TestUpdatesAnIndex(t *testing.T) {
   spec := Spec(t)
-  db := DB()
+  db := DB([]string{"x1", "x2", "x3"})
   db.Update(newFakeResource("1", "x1", "x2"))
   resource := newFakeResource("1", "x1", "x3")
   db.Update(resource)
@@ -39,7 +39,7 @@ func TestUpdatesAnIndex(t *testing.T) {
 
 func TestIndexesMultipleResources(t *testing.T) {
   spec := Spec(t)
-  db := DB()
+  db := DB([]string{"x1", "x2", "x3", "x4"})
   resource1 := newFakeResource("1", "x1", "x2")
   resource2 := newFakeResource("2", "x1", "x3", "x4")
   db.Update(resource1)
@@ -49,6 +49,15 @@ func TestIndexesMultipleResources(t *testing.T) {
   assertDBIndex(spec, db, "x3", resource2)
   assertDBIndex(spec, db, "x4", resource2)
   assertResources(spec, db, resource1, resource2)
+}
+
+func TestSilentlyIgnoresUnknownIndexes(t *testing.T) {
+  spec := Spec(t)
+  db := DB([]string{"x1"})
+  resource := newFakeResource("1", "x1", "x2")
+  db.Update(resource)
+  assertDBIndex(spec, db, "x1", resource)
+  spec.Expect(len(db.indexes)).ToEqual(1)
 }
 
 func assertDBIndex(spec *S, db *Database, index string, resources ...Resource) {
