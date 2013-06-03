@@ -1,5 +1,9 @@
 package nabu
 
+import (
+  "sync"
+)
+
 type Index interface {
   Remove(id string)
   Add(id string)
@@ -7,8 +11,37 @@ type Index interface {
   Count() int
 }
 
+type Set struct {
+  values map[string]bool
+  sync.RWMutex
+}
+
 func NewIndex() Index {
-  return &SetIndex {
-    values: make(map[string]bool, 1048576),
+  return &Set {
+    values: make(map[string]bool, 16392),
   }
+}
+
+func (i *Set) Remove(id string) {
+  i.Lock()
+  defer i.Unlock()
+  delete(i.values, id)
+}
+
+func (i *Set) Add(id string) {
+  i.Lock()
+  defer i.Unlock()
+  i.values[id] = true
+}
+
+func (i *Set) Exists(id string) bool {
+  i.RLock()
+  defer i.RUnlock()
+  return i.values[id]
+}
+
+func (i *Set) Count() int {
+  i.RLock()
+  defer i.RUnlock()
+  return len(i.values)
 }

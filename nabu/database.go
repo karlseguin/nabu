@@ -18,7 +18,7 @@ func DB(indexNames []string) *Database {
   }
   return &Database {
     indexes: indexes,
-    resources: make(map[string]Resource, 1048576),
+    resources: make(map[string]Resource, 16392),
     rLock: new(sync.RWMutex),
   }
 }

@@ -31,16 +31,16 @@ func (q *Query) filter() []string {
     if index == nil { continue }
     length := index.Count()
     if length < smallestLength {
-      others = append(others, smallest.(*SetIndex).values)
+      others = append(others, smallest.(*Set).values)
       smallest = index
       smallestLength = length
     } else {
-      others = append(others, index.(*SetIndex).values)
+      others = append(others, index.(*Set).values)
     }
   }
   found := 0
   var matches []string
-  for key, _ := range smallest.(*SetIndex).values {
+  for key, _ := range smallest.(*Set).values {
     for _, index := range others {
       if index[key] == false { goto nomatch }
     }
