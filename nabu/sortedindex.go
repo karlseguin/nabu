@@ -2,6 +2,7 @@ package nabu
 
 import (
   "time"
+  "sync"
   "math/rand"
 )
 
@@ -45,6 +46,7 @@ type Skiplist struct {
   head *SkiplistNode
   tail *SkiplistNode
   lookup map[string]int
+  sync.RWMutex
 }
 
 type SkiplistNode struct {
@@ -55,7 +57,9 @@ type SkiplistNode struct {
 }
 
 func (s *Skiplist) Set(rank int, id string) {
+  s.RLock()
   old, exists := s.lookup[id]
+  s.RUnlock()
   if exists {
     if old == rank { return }
     s.Remove(id)
@@ -75,6 +79,8 @@ func (s *Skiplist) Set(rank int, id string) {
     next: make([]*SkiplistNode, level+1),
   }
 
+  s.Lock()
+  defer s.Unlock()
   current := s.head
   for i := s.levels - 1; i >= 0; i-- {
     for ; current.next[i] != nil; current = current.next[i] {
@@ -96,9 +102,13 @@ func (s *Skiplist) Set(rank int, id string) {
 }
 
 func (s *Skiplist) Remove(id string) (int, bool) {
+  s.RLock()
   rank, exists := s.lookup[id]
+  s.RUnlock()
   if exists == false { return 0, false }
 
+  s.Lock()
+  defer s.Unlock()
   current := s.head
   for i := s.levels - 1; i >= 0; i-- {
     for ; current.next[i] != nil; current = current.next[i] {
@@ -125,19 +135,24 @@ func (n *SkiplistNode) String() string {
 }
 
 func (s *Skiplist) Forward() SortedIndexIterator {
+  s.RLock()
   return &SkiplistForwardIterator{
     current: s.head.next[0],
+    unlock: func() { s.RUnlock() },
   }
 }
 
 func (s *Skiplist) Backward() SortedIndexIterator {
+  s.RLock()
   return &SkiplistBackwardIterator{
     current: s.tail,
+    unlock: func() { s.RUnlock() },
   }
 }
 
 type SkiplistForwardIterator struct {
   current *SkiplistNode
+  unlock func()
 }
 
 func (i *SkiplistForwardIterator) HasNext() bool {
@@ -153,10 +168,12 @@ func (i *SkiplistForwardIterator) Current() (int, string) {
 }
 
 func (i *SkiplistForwardIterator) Close() {
+  i.unlock()
 }
 
 type SkiplistBackwardIterator struct {
   current *SkiplistNode
+  unlock func()
 }
 
 func (i *SkiplistBackwardIterator) HasNext() bool {
@@ -172,4 +189,5 @@ func (i *SkiplistBackwardIterator) Current() (int, string) {
 }
 
 func (i *SkiplistBackwardIterator) Close() {
+  i.unlock()
 }
