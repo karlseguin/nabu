@@ -127,6 +127,7 @@ func (s *Skiplist) Remove(id string) (int, bool) {
   } else {
     current.next[0].prev = current
   }
+  delete(s.lookup, id)
   return rank, true
 }
 

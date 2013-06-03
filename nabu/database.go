@@ -28,12 +28,12 @@ func DB(indexNames []string, sortNames []string) *Database {
   }
 }
 
-func (db *Database) Find(indexNames ...string) *Query {
-  indexes := make([]Index, len(indexNames)) //todo mnenomize
+func (db *Database) Find(sortName string, indexNames ...string) *Query {
+  indexes := make([]*Set, len(indexNames)) //todo mnenomize
   for i, name := range indexNames {
-    indexes[i] = db.indexes[name]
+    indexes[i] = db.indexes[name].(*Set)
   }
-  return NewQuery(db, indexes)
+  return NewQuery(db, db.sorts[sortName], indexes)
 }
 
 func (db *Database) Update(resource Resource) {

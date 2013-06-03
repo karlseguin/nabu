@@ -1,48 +1,44 @@
 package nabu
 
 import (
-  "sort"
   "testing"
 )
 
-func TestIgnoresInvalidIndex(t *testing.T) {
+func TestASingleFilter(t *testing.T) {
   spec := Spec(t)
-  query := newQuery([]string{"a", "b", "c", "d", "e", "f"}, []string{"b", "d", "e", "g"})
-  query.indexes = append(query.indexes, nil)
+  query := newQuery([]string{"a", "b", "c", "d", "e"}, []string{"a", "b", "c"})
   ids := query.Result()
-  sort.Strings(ids)
-  assertQueryResult(spec, ids, "b", "d", "e")
+  assertQueryResult(spec, ids, "a", "b", "c")
 }
 
 func TestFiltersTwoIndexes(t *testing.T) {
   spec := Spec(t)
-  query := newQuery([]string{"a", "b", "c", "d", "e", "f"}, []string{"b", "d", "e", "g"})
+  query := newQuery([]string{"a", "b", "c", "d", "e"}, []string{"a", "b", "c", "d", "e", "f"}, []string{"b", "d", "e", "g"})
   ids := query.Result()
-  sort.Strings(ids)
   assertQueryResult(spec, ids, "b", "d", "e")
 }
 
-// impossible to test until the sorting is in
-// func TestAppliesALimit(t *testing.T) {
-//   spec := Spec(t)
-//   query := newQuery([]string{"a", "b", "c", "d", "e", "f"}, []string{"b", "d", "e", "g"})
-//   ids := query.Limit(2).Result()
-//   sort.Strings(ids)
-//   assertQueryResult(spec, ids, "b", "d")
-// }
+func TestAppliesALimit(t *testing.T) {
+  spec := Spec(t)
+  query := newQuery([]string{"a", "b", "c", "d", "e"}, []string{"a", "b", "c", "d", "e", "f"}, []string{"b", "d", "e", "g"})
+  ids := query.Limit(2).Result()
+  assertQueryResult(spec, ids, "b", "d")
+}
 
-func newQuery(indexes ...[]string) *Query {
-  query := &Query {
-    indexes: make([]Index, len(indexes)),
-  }
-  for i, index := range indexes {
-    idx := NewIndex()
-    for _, id := range index {
-      idx.Add(id)
+func newQuery(order []string, indexNames ...[]string) *Query {
+  indexes := make([]*Set, len(indexNames))
+  for i, ids := range indexNames {
+    index := NewIndex()
+    for _, id := range ids {
+      index.Add(id)
     }
-    query.indexes[i] = idx
+    indexes[i] = index.(*Set)
   }
-  return query
+  sort := NewSortedIndex()
+  for i, id := range order {
+    sort.Set(i, id)
+  }
+  return NewQuery(nil, sort, indexes)
 }
 
 func assertQueryResult(spec *S, actuals []string, expected ...string) {
