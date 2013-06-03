@@ -1,7 +1,6 @@
 package nabu
 
 import (
-  "sort"
   "sync"
 )
 
@@ -44,36 +43,12 @@ func (db *Database) Update(resource Resource) {
   db.resources[id] = resource
   db.rLock.Unlock()
 
-  indexes := resource.GetIndexes()
   if exists {
     db.removeFromSorts(id, p.GetSorts())
-
-    // hate everything about this
-    existings := p.GetIndexes()
-    sort.Strings(existings)
-    sort.Strings(indexes)
-    length := len(indexes)
-    existingLength := len(existings)
-    j := 0
-    for i := 0; i < length; {
-      index := indexes[i]
-      var existing string
-      if j < existingLength { existing = existings[j] }
-      if index > existing && existing != "" {
-        db.unindex(id, existing)
-        j++
-      } else if index < existing || existing == ""  {
-        db.index(id, index)
-        i++
-      } else {
-        i++
-        j++
-      }
-    }
-  } else {
-    db.index(id, indexes...)
+    db.unindex(id, p.GetIndexes())
   }
   db.addToSorts(id, resource.GetSorts())
+  db.index(id, resource.GetIndexes())
 }
 
 func (db *Database) Remove(id string) {
@@ -82,11 +57,11 @@ func (db *Database) Remove(id string) {
   delete(db.resources, id)
   db.rLock.Unlock()
   if exists {
-    db.unindex(id, resource.GetIndexes()...)
+    db.unindex(id, resource.GetIndexes())
   }
 }
 
-func (db *Database) index(id string, indexNames ...string) {
+func (db *Database) index(id string, indexNames []string) {
   for _, name := range indexNames {
     if index, exists := db.indexes[name]; exists {
       index.Add(id)
@@ -94,7 +69,7 @@ func (db *Database) index(id string, indexNames ...string) {
   }
 }
 
-func (db *Database) unindex(id string, indexNames ...string) {
+func (db *Database) unindex(id string, indexNames []string) {
   for _, name := range indexNames {
     if index, exists := db.indexes[name]; exists {
       index.Remove(id)
