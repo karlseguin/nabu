@@ -7,17 +7,23 @@ import (
 
 type Database struct {
   indexes map[string]Index
+  sorts map[string]SortedIndex
   resources map[string]Resource
   rLock *sync.RWMutex
 }
 
-func DB(indexNames []string) *Database {
+func DB(indexNames []string, sortNames []string) *Database {
   indexes := make(map[string]Index, len(indexNames))
   for _, name := range indexNames {
     indexes[name] = NewIndex()
   }
+  sorts := make(map[string]SortedIndex, len(sortNames))
+  for _, name := range sortNames {
+    sorts[name] = NewSortedIndex()
+  }
   return &Database {
     indexes: indexes,
+    sorts: sorts,
     resources: make(map[string]Resource, 16392),
     rLock: new(sync.RWMutex),
   }
@@ -40,6 +46,8 @@ func (db *Database) Update(resource Resource) {
 
   indexes := resource.GetIndexes()
   if exists {
+    db.removeFromSorts(id, p.GetSorts())
+
     // hate everything about this
     existings := p.GetIndexes()
     sort.Strings(existings)
@@ -65,6 +73,7 @@ func (db *Database) Update(resource Resource) {
   } else {
     db.index(id, indexes...)
   }
+  db.addToSorts(id, resource.GetSorts())
 }
 
 func (db *Database) Remove(id string) {
@@ -88,6 +97,22 @@ func (db *Database) index(id string, indexNames ...string) {
 func (db *Database) unindex(id string, indexNames ...string) {
   for _, name := range indexNames {
     if index, exists := db.indexes[name]; exists {
+      index.Remove(id)
+    }
+  }
+}
+
+func (db *Database) addToSorts(id string, sorts map[string]int) {
+  for name, rank := range sorts {
+    if index, exists := db.sorts[name]; exists {
+      index.Set(rank, id)
+    }
+  }
+}
+
+func (db *Database) removeFromSorts(id string, sorts map[string]int) {
+  for name, _ := range sorts {
+    if index, exists := db.sorts[name]; exists {
       index.Remove(id)
     }
   }
