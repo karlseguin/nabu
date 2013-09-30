@@ -2,6 +2,7 @@ package nabu
 
 import (
   "fmt"
+  "sort"
 )
 
 type Query struct {
@@ -63,13 +64,9 @@ func (q *Query) Offset(offset int) *Query {
   return q
 }
 
-func (q *Query) GetIndexes() Indexes {
-  return q.indexes[0:q.indexCount]
-}
-
 func (q *Query) Execute() Result {
   defer q.reset()
-  return q.db.Find(q)
+  return q.execute()
 }
 
 func (q *Query) reset() {
@@ -78,4 +75,92 @@ func (q *Query) reset() {
   q.indexCount = 0
   q.limit = q.db.defaultLimit
   q.db.queryPool <- q
+}
+
+
+func (q *Query) execute() Result {
+  indexCount := q.indexCount
+  if indexCount == 0 {
+    return q.findWithNoIndexes()
+  }
+  indexes := q.indexes[0:q.indexCount]
+  sort.Sort(indexes)
+  firstLength := len(indexes[0])
+
+  if firstLength == 0 {
+    return EmptyResult
+  }
+
+  if firstLength <= q.db.maxUnsortedSize && q.sortLength / firstLength > 100 {
+    return q.findByIndex(indexes)
+  }
+  return q.findBySort(indexes)
+}
+
+func (q *Query) findWithNoIndexes() Result {
+  s := *q.sort
+  limit := q.limit
+  sortLength := q.sortLength
+  result := <- q.db.sortedResults
+  if q.desc {
+    for i := sortLength-1; i >= 0; i-- {
+      if result.add(s.list[i]) == limit { break }
+    }
+  } else {
+    for i := 0; i < sortLength; i++ {
+      if result.add(s.list[i]) == limit { break }
+    }
+  }
+  return result
+}
+
+func (q *Query) findByIndex(indexes Indexes) Result {
+  first := indexes[0]
+  indexCount := len(indexes)
+  ranking := q.sort.lookup
+  result := <- q.db.unsortedResults
+  for value, _ := range first {
+    for j := 1; j < indexCount; j++ {
+      if _, exists := indexes[j][value]; exists == false {
+        goto nomatch
+      }
+    }
+    if rank, exists := ranking[value]; exists {
+      result.add(value, rank)
+    }
+    nomatch:
+  }
+  return result.finalize(q)
+}
+
+func (q *Query) findBySort(indexes Indexes) Result {
+  s := *q.sort
+  limit := q.limit
+  sortLength := q.sortLength
+  indexCount := q.indexCount
+  result := <- q.db.sortedResults
+  if q.desc {
+    for i := sortLength-1; i >= 0; i-- {
+      value := s.list[i]
+      for j := 0; j < indexCount; j++ {
+        if _, exists := indexes[j][value]; exists == false {
+          goto nomatchdesc
+        }
+      }
+      if result.add(value) == limit { break }
+      nomatchdesc:
+    }
+  } else {
+    for i := 0; i < sortLength; i++ {
+      value := s.list[i]
+      for j := 0; j < indexCount; j++ {
+        if _, exists := indexes[j][value]; exists == false {
+          goto nomatchasc
+        }
+      }
+      if result.add(value) == limit { break }
+      nomatchasc:
+    }
+  }
+  return result
 }

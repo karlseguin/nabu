@@ -14,7 +14,8 @@ func TestUnsortedResultAddsValues(t *testing.T) {
   spec.Expect(result.Len()).ToEqual(3)
 
   //todo the behavior of UnsortedResult
-  //when fialized hasn't been called is undefined
+  //when finalized hasn't been called is undefined,
+  //so why are we testing it?
   spec.Expect(result.Data()[0]).ToEqual("its")
   spec.Expect(result.Data()[1]).ToEqual("over")
   spec.Expect(result.Data()[2]).ToEqual("9000")
