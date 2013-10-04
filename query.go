@@ -25,24 +25,17 @@ func newQuery(db *Database) *Query {
   return q
 }
 
-func (q *Query) Index(name string) *Query {
-  index, exists := q.db.indexes[name]
-  if exists == false { panic(fmt.Sprintf("unknown index %q", name)) }
-  q.indexes[q.indexCount] = index
-  q.indexCount++
-  return q
-}
-
-func (q *Query) Indexes(names ...string) *Query {
-  l := len(names)
-  for i := 0; i < l; i++ {
-    if index, exists := q.db.indexes[names[i]]; exists == false {
-      panic(fmt.Sprintf("unknown index %q", names[i]))
+func (q *Query) Where(params ...string) *Query {
+  l := len(params)
+  for i := 0; i < l; i+=2 {
+    indexName := params[i] + "$" + params[i+1]
+    if index, exists := q.db.indexes[indexName]; exists == false {
+      panic(fmt.Sprintf("unknown index %q", indexName))
     } else {
-      q.indexes[q.indexCount + i] = index
+      q.indexes[q.indexCount + (i/2)] = index
     }
   }
-  q.indexCount += l
+  q.indexCount += l / 2
   return q
 }
 

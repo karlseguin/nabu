@@ -27,45 +27,45 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
 func TestInsertANewDocument(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  db.Update(NewDoc("1134d", "index1", "age"))
+  db.Update(NewDoc("1134d", "index", "1", "age", "17"))
   doc := db.Get("1134d").(*Doc)
   spec.Expect(doc.id).ToEqual("1134d")
-  spec.Expect(db.indexes["index1"].Contains("1134d")).ToEqual(true)
-  spec.Expect(db.indexes["age"].Contains("1134d")).ToEqual(true)
+  spec.Expect(db.indexes["index$1"].Contains("1134d")).ToEqual(true)
+  spec.Expect(db.indexes["age$17"].Contains("1134d")).ToEqual(true)
 }
 
 func TestUpdatesADocument(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  db.Update(NewDoc("94", "index1", "age"))
-  db.Update(NewDoc("94", "index1", "index3"))
+  db.Update(NewDoc("94", "index", "1", "age", "18"))
+  db.Update(NewDoc("94", "index", "1", "index", "3"))
   doc := db.Get("94").(*Doc)
   spec.Expect(doc.id).ToEqual("94")
-  spec.Expect(db.indexes["index1"].Contains("94")).ToEqual(true)
-  spec.Expect(db.indexes["age"].Contains("94")).ToEqual(false)
-  spec.Expect(db.indexes["index3"].Contains("94")).ToEqual(true)
+  spec.Expect(db.indexes["index$1"].Contains("94")).ToEqual(true)
+  spec.Expect(db.indexes["age$18"].Contains("94")).ToEqual(false)
+  spec.Expect(db.indexes["index$3"].Contains("94")).ToEqual(true)
 }
 
 func TestRemovesADocument(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  doc := NewDoc("94", "index1", "age")
+  doc := NewDoc("94", "index", "1", "age", "22")
   db.Update(doc)
   db.Remove(doc)
   spec.Expect(db.Get("94")).ToBeNil()
-  spec.Expect(db.indexes["index1"].Contains("94")).ToEqual(false)
-  spec.Expect(db.indexes["age"].Contains("94")).ToEqual(false)
+  spec.Expect(db.indexes["index$1"].Contains("94")).ToEqual(false)
+  spec.Expect(db.indexes["age$22"].Contains("94")).ToEqual(false)
 }
 
 func TestRemovesADocumentById(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  doc := NewDoc("87", "index1", "age")
+  doc := NewDoc("87", "index", "1", "age", "9")
   db.Update(doc)
   db.RemoveById("87")
   spec.Expect(db.Get("87")).ToBeNil()
-  spec.Expect(db.indexes["index1"].Contains("87")).ToEqual(false)
-  spec.Expect(db.indexes["age"].Contains("87")).ToEqual(false)
+  spec.Expect(db.indexes["index$1"].Contains("87")).ToEqual(false)
+  spec.Expect(db.indexes["age$9"].Contains("87")).ToEqual(false)
 }
 
 type Doc struct {
@@ -78,14 +78,17 @@ func NewDoc(id string, indexes ...string) *Doc {
 }
 
 func (d *Doc) ReadMeta(meta *Meta) {
-  meta.Id(d.id).Indexes(d.indexes...)
+  meta.Id(d.id)
+  for i := 0; i < len(d.indexes); i+=2 {
+    meta.Index(d.indexes[i], d.indexes[i+1])
+  }
 }
 
 func SmallDB() *Database {
   c := Configure().QueryPoolSize(1).ResultsPoolSize(1, 1)
   db := New(c)
   db.AddSort("created", []string{})
-  addIndex(db, "age", newIndex())
+  addIndex(db, "age$29", newIndex())
   return db
 }
 

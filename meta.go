@@ -16,14 +16,7 @@ func (m *Meta) Id(id string) *Meta {
   return m
 }
 
-func (m *Meta) Index(index string) *Meta {
-  m.indexes[index] = struct{}{}
-  return m
-}
-
-func (m *Meta) Indexes(indexes ...string) *Meta {
-  for _, index := range indexes {
-    m.indexes[index] = struct{}{}
-  }
+func (m *Meta) Index(index, value string) *Meta {
+  m.indexes[index + "$" + value] = struct{}{}
   return m
 }

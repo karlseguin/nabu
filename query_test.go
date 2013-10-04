@@ -26,25 +26,16 @@ func TestQueryPanicsOnUnknownSort(t *testing.T) {
 func TestQueryPanicsOnUnknownIndex(t *testing.T) {
   spec := gspec.New(t)
   defer func() {
-    spec.Expect(recover().(string)).ToEqual(`unknown index "abc"`)
+    spec.Expect(recover().(string)).ToEqual(`unknown index "abc$zzz"`)
   }()
   db := SmallDB()
-  db.Query("created").Index("abc")
-}
-
-func TestQueryPanicsOnUnknownIndexes(t *testing.T) {
-  spec := gspec.New(t)
-  defer func() {
-    spec.Expect(recover().(string)).ToEqual(`unknown index "fail"`)
-  }()
-  db := SmallDB()
-  db.Query("created").Indexes("age", "fail")
+  db.Query("created").Where("abc", "zzz")
 }
 
 func TestQueryExecuteReleasesTheQuery(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  query := db.Query("created").Indexes("age")
+  query := db.Query("created").Where("age", "29")
   spec.Expect(len(db.queryPool)).ToEqual(0)
   query.Execute()
   spec.Expect(len(db.queryPool)).ToEqual(1)
@@ -53,7 +44,7 @@ func TestQueryExecuteReleasesTheQuery(t *testing.T) {
 func TestQueryReleaseCanSafelyBeReused(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  query := db.Query("created").Indexes("age").Desc().Limit(2)
+  query := db.Query("created").Where("age", "29").Desc().Limit(2)
   query.Execute()
   spec.Expect(query.desc).ToEqual(false)
   spec.Expect(query.limit).ToEqual(10)
@@ -80,8 +71,8 @@ func TestQueryWithNoIndexesDescending(t *testing.T) {
 func TestQueryWithASingleIndexBySort(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
-  addIndex(db, "a", makeIndex([]string{"b", "c", "f", "h", "z"}))
-  result := db.Query("created").Index("a").Execute()
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "z"}))
+  result := db.Query("created").Where("a", "1").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"b", "c", "f", "h"})
 }
@@ -89,9 +80,9 @@ func TestQueryWithASingleIndexBySort(t *testing.T) {
 func TestQueryWithTwoIndexesBySort(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
-  addIndex(db, "a", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  addIndex(db, "b", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
-  result := db.Query("created").Indexes("a", "b").Execute()
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  addIndex(db, "b$2", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
+  result := db.Query("created").Where("a", "1", "b", "2").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"c", "h", "k"})
 }
@@ -99,9 +90,9 @@ func TestQueryWithTwoIndexesBySort(t *testing.T) {
 func TestQueryBySortDescending(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
-  addIndex(db, "a", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  addIndex(db, "b", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
-  result := db.Query("created").Indexes("a", "b").Desc().Execute()
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  addIndex(db, "b$3", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
+  result := db.Query("created").Where("a", "1", "b", "3").Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"k", "h", "c"})
 }
@@ -109,8 +100,8 @@ func TestQueryBySortDescending(t *testing.T) {
 func TestQueryWithASingleIndexByIndex(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", largeSort(1000))
-  addIndex(db, "a", makeIndex([]string{"1", "4", "7", "-1"}))
-  result := db.Query("created").Index("a").Execute()
+  addIndex(db, "a$66", makeIndex([]string{"1", "4", "7", "-1"}))
+  result := db.Query("created").Where("a", "66").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"1", "4", "7"})
 }
@@ -118,9 +109,9 @@ func TestQueryWithASingleIndexByIndex(t *testing.T) {
 func TestQueryWithTwoIndexesByIndex(t *testing.T) {
    db := New(Configure())
   db.AddSort("created", largeSort(1000))
-  addIndex(db, "a", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  addIndex(db, "b", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
-  result := db.Query("created").Indexes("a", "b").Execute()
+  addIndex(db, "a$5", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  addIndex(db, "b$4", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
+  result := db.Query("created").Where("a", "5", "b", "4").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"3", "7", "9"})
 }
@@ -128,9 +119,9 @@ func TestQueryWithTwoIndexesByIndex(t *testing.T) {
 func TestQueryByIndexDescending(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", largeSort(1000))
-  addIndex(db, "a", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  addIndex(db, "b", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
-  result := db.Query("created").Indexes("a", "b").Desc().Execute()
+  addIndex(db, "a$x", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  addIndex(db, "b$y", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
+  result := db.Query("created").Where("a", "x", "b", "y").Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"9", "7", "3"})
 }
@@ -139,7 +130,7 @@ func BenchmarkFindLarge(b *testing.B) {
   db := setupDb(100000, 80000, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
-    db.Query("created").Index("index_0").Execute().Close()
+    db.Query("created").Where("index_0", "_").Execute().Close()
   }
 }
 
@@ -147,7 +138,7 @@ func BenchmarkFindAverage(b *testing.B) {
   db := setupDb(100000, 50000, 100000, 1000, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
-    db.Query("created").Indexes("index_0", "index_2").Execute().Close()
+    db.Query("created").Where("index_0", "_", "index_2", "_").Execute().Close()
   }
 }
 
@@ -155,7 +146,7 @@ func BenchmarkFindSmall(b *testing.B) {
   db := setupDb(100000, 75000, 100000, 75000, 100000, 100, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
-    db.Query("created").Indexes("index_0", "index_2", "index_4").Execute().Close()
+    db.Query("created").Where("index_0", "_", "index_2", "_", "index_4", "_").Execute().Close()
   }
 }
 
@@ -194,7 +185,7 @@ func setupDb(sortLength int, params ...int) *Database {
       value := strconv.Itoa(int(rand.Int31n(maxvalue)))
       index.ids[value] = struct{}{}
     }
-    addIndex(db, "index_" + strconv.Itoa(i), index)
+    addIndex(db, "index_" + strconv.Itoa(i) + "$_", index)
   }
   return db
 }

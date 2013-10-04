@@ -9,17 +9,12 @@ func TestMetaCanBeSet(t *testing.T) {
   spec := gspec.New(t)
   meta := newMeta()
   meta.Id("paul")
-  meta.Index("ghanima")
-  meta.Index("leto")
-  meta.Indexes("spice", "worm")
+  meta.Index("children", "ghanima")
+  meta.Index("children", "leto")
   spec.Expect(meta.id).ToEqual("paul")
-  spec.Expect(len(meta.indexes)).ToEqual(4)
-  _, exists := meta.indexes["ghanima"]
+  spec.Expect(len(meta.indexes)).ToEqual(2)
+  _, exists := meta.indexes["children$ghanima"]
   spec.Expect(exists).ToEqual(true)
-  _, exists = meta.indexes["leto"]
-  spec.Expect(exists).ToEqual(true)
-  _, exists = meta.indexes["spice"]
-  spec.Expect(exists).ToEqual(true)
-  _, exists = meta.indexes["worm"]
+  _, exists = meta.indexes["children$leto"]
   spec.Expect(exists).ToEqual(true)
 }
