@@ -85,6 +85,10 @@ func SmallDB() *Database {
   c := Configure().QueryPoolSize(1).ResultsPoolSize(1, 1)
   db := New(c)
   db.AddSort("created", []string{})
-  db.AddIndex("age", newIndex())
+  addIndex(db, "age", newIndex())
   return db
+}
+
+func addIndex(db *Database, name string, index *Index) {
+  db.indexes[name] = index
 }

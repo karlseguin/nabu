@@ -68,12 +68,6 @@ func (db *Database) AddSort(name string, list []string) {
   db.sorts[name] = s
 }
 
-func (db *Database) AddIndex(name string, index *Index) {
-  db.indexLock.Lock()
-  defer db.indexLock.Unlock()
-  db.indexes[name] = index
-}
-
 func (d *Database) Get(id string) Document {
   return d.getFromBucket(id, d.getBucket(id))
 }
