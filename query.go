@@ -19,7 +19,7 @@ type Query struct {
 func newQuery(db *Database) *Query {
   q := &Query{
     db: db,
-    indexes: make([]Index, 10),
+    indexes: make([]*Index, 10),
   }
   q.reset()
   return q
@@ -77,15 +77,17 @@ func (q *Query) reset() {
   q.db.queryPool <- q
 }
 
-
 func (q *Query) execute() Result {
   indexCount := q.indexCount
   if indexCount == 0 {
     return q.findWithNoIndexes()
   }
+  q.indexes.rlock(q.indexCount)
+  defer q.indexes.runlock(q.indexCount)
+
   indexes := q.indexes[0:q.indexCount]
   sort.Sort(indexes)
-  firstLength := len(indexes[0])
+  firstLength := len(indexes[0].ids)
 
   if firstLength == 0 {
     return EmptyResult
@@ -119,14 +121,14 @@ func (q *Query) findByIndex(indexes Indexes) Result {
   indexCount := len(indexes)
   ranking := q.sort.lookup
   result := <- q.db.unsortedResults
-  for value, _ := range first {
+  for id, _ := range first.ids {
     for j := 1; j < indexCount; j++ {
-      if _, exists := indexes[j][value]; exists == false {
+      if _, exists := indexes[j].ids[id]; exists == false {
         goto nomatch
       }
     }
-    if rank, exists := ranking[value]; exists {
-      result.add(value, rank)
+    if rank, exists := ranking[id]; exists {
+      result.add(id, rank)
     }
     nomatch:
   }
@@ -141,24 +143,24 @@ func (q *Query) findBySort(indexes Indexes) Result {
   result := <- q.db.sortedResults
   if q.desc {
     for i := sortLength-1; i >= 0; i-- {
-      value := s.list[i]
+      id := s.list[i]
       for j := 0; j < indexCount; j++ {
-        if _, exists := indexes[j][value]; exists == false {
+        if _, exists := indexes[j].ids[id]; exists == false {
           goto nomatchdesc
         }
       }
-      if result.add(value) == limit { break }
+      if result.add(id) == limit { break }
       nomatchdesc:
     }
   } else {
     for i := 0; i < sortLength; i++ {
-      value := s.list[i]
+      id := s.list[i]
       for j := 0; j < indexCount; j++ {
-        if _, exists := indexes[j][value]; exists == false {
+        if _, exists := indexes[j].ids[id]; exists == false {
           goto nomatchasc
         }
       }
-      if result.add(value) == limit { break }
+      if result.add(id) == limit { break }
       nomatchasc:
     }
   }

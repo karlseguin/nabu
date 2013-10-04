@@ -4,6 +4,7 @@ type Configuration struct {
   maxLimit int
   defaultLimit int
   queryPoolSize int
+  bucketCount uint32
   maxUnsortedSize int
   sortedResultPoolSize int
   unsortedResultPoolSize int
@@ -12,6 +13,7 @@ type Configuration struct {
 func Configure() *Configuration {
   return &Configuration {
     maxLimit: 100,
+    bucketCount: 25,
     defaultLimit: 10,
     queryPoolSize: 1024,
     maxUnsortedSize: 100,
@@ -43,5 +45,10 @@ func (c *Configuration) MaxUnsortedSize(max int) *Configuration {
 func (c *Configuration) ResultsPoolSize(sorted, unsorted int) *Configuration {
   c.sortedResultPoolSize = sorted
   c.unsortedResultPoolSize = unsorted
+  return c
+}
+
+func (c *Configuration) BucketCount(bucketCount int) *Configuration {
+  c.bucketCount = uint32(bucketCount)
   return c
 }

@@ -67,4 +67,3 @@ func (r *UnsortedResult) Swap(i, j int) {
   r.data[i] = r.data[j]
   r.data[j] = x
 }
-

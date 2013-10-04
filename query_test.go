@@ -159,10 +159,10 @@ func BenchmarkFindSmall(b *testing.B) {
   }
 }
 
-func makeIndex(values []string) map[string]struct{} {
-  index := make(Index)
+func makeIndex(values []string) *Index {
+  index := newIndex()
   for _, v := range values {
-    index[v] = struct{}{}
+    index.ids[v] = struct{}{}
   }
   return index
 }
@@ -189,10 +189,10 @@ func setupDb(sortLength int, params ...int) *Database {
   for i := 0; i < len(params); i += 2 {
     length := params[i]
     maxvalue := int32(params[i+1])
-    index := make(Index, length)
+    index := newIndex()
     for j := 0; j < length; j++ {
       value := strconv.Itoa(int(rand.Int31n(maxvalue)))
-      index[value] = struct{}{}
+      index.ids[value] = struct{}{}
     }
     db.AddIndex("index_" + strconv.Itoa(i), index)
   }
@@ -206,12 +206,3 @@ func largeSort(size int) []string {
   }
   return s
 }
-
-func SmallDB() *Database {
-  c := Configure().QueryPoolSize(1).ResultsPoolSize(1, 1)
-  db := New(c)
-  db.AddSort("created", []string{})
-  db.AddIndex("age", make(Index, 0))
-  return db
-}
-
