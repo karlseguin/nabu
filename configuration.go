@@ -15,16 +15,11 @@ func Configure() *Configuration {
     maxLimit: 100,
     bucketCount: 25,
     defaultLimit: 10,
-    queryPoolSize: 1024,
+    queryPoolSize: 512,
     maxUnsortedSize: 100,
     sortedResultPoolSize: 512,
     unsortedResultPoolSize: 512,
   }
-}
-
-func (c *Configuration) QueryPoolSize(size int) *Configuration {
-  c.queryPoolSize = size
-  return c
 }
 
 func (c *Configuration) DefaultLimit(limit int) *Configuration {
@@ -34,6 +29,16 @@ func (c *Configuration) DefaultLimit(limit int) *Configuration {
 
 func (c *Configuration) MaxLimit(max int) *Configuration {
   c.maxLimit = max
+  return c
+}
+
+func (c *Configuration) BucketCount(bucketCount int) *Configuration {
+  c.bucketCount = uint32(bucketCount)
+  return c
+}
+
+func (c *Configuration) QueryPoolSize(size int) *Configuration {
+  c.queryPoolSize = size
   return c
 }
 
@@ -48,7 +53,4 @@ func (c *Configuration) ResultsPoolSize(sorted, unsorted int) *Configuration {
   return c
 }
 
-func (c *Configuration) BucketCount(bucketCount int) *Configuration {
-  c.bucketCount = uint32(bucketCount)
-  return c
-}
+

@@ -66,7 +66,7 @@ func TestQueryWithNoIndexes(t *testing.T) {
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"a", "b", "c", "d", "i", "j", "k"})
+  assertResult(t, result.Ids(), []string{"a", "b", "c", "d", "i", "j", "k"})
 }
 
 func TestQueryWithNoIndexesDescending(t *testing.T) {
@@ -74,7 +74,7 @@ func TestQueryWithNoIndexesDescending(t *testing.T) {
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"k", "j", "i", "d", "c", "b", "a"})
+  assertResult(t, result.Ids(), []string{"k", "j", "i", "d", "c", "b", "a"})
 }
 
 func TestQueryWithASingleIndexBySort(t *testing.T) {
@@ -83,7 +83,7 @@ func TestQueryWithASingleIndexBySort(t *testing.T) {
   addIndex(db, "a", makeIndex([]string{"b", "c", "f", "h", "z"}))
   result := db.Query("created").Index("a").Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"b", "c", "f", "h"})
+  assertResult(t, result.Ids(), []string{"b", "c", "f", "h"})
 }
 
 func TestQueryWithTwoIndexesBySort(t *testing.T) {
@@ -93,7 +93,7 @@ func TestQueryWithTwoIndexesBySort(t *testing.T) {
   addIndex(db, "b", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
   result := db.Query("created").Indexes("a", "b").Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"c", "h", "k"})
+  assertResult(t, result.Ids(), []string{"c", "h", "k"})
 }
 
 func TestQueryBySortDescending(t *testing.T) {
@@ -103,7 +103,7 @@ func TestQueryBySortDescending(t *testing.T) {
   addIndex(db, "b", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
   result := db.Query("created").Indexes("a", "b").Desc().Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"k", "h", "c"})
+  assertResult(t, result.Ids(), []string{"k", "h", "c"})
 }
 
 func TestQueryWithASingleIndexByIndex(t *testing.T) {
@@ -112,7 +112,7 @@ func TestQueryWithASingleIndexByIndex(t *testing.T) {
   addIndex(db, "a", makeIndex([]string{"1", "4", "7", "-1"}))
   result := db.Query("created").Index("a").Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"1", "4", "7"})
+  assertResult(t, result.Ids(), []string{"1", "4", "7"})
 }
 
 func TestQueryWithTwoIndexesByIndex(t *testing.T) {
@@ -122,7 +122,7 @@ func TestQueryWithTwoIndexesByIndex(t *testing.T) {
   addIndex(db, "b", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
   result := db.Query("created").Indexes("a", "b").Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"3", "7", "9"})
+  assertResult(t, result.Ids(), []string{"3", "7", "9"})
 }
 
 func TestQueryByIndexDescending(t *testing.T) {
@@ -132,7 +132,7 @@ func TestQueryByIndexDescending(t *testing.T) {
   addIndex(db, "b", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
   result := db.Query("created").Indexes("a", "b").Desc().Execute()
   defer result.Close()
-  assertResult(t, result.Data(), []string{"9", "7", "3"})
+  assertResult(t, result.Ids(), []string{"9", "7", "3"})
 }
 
 func BenchmarkFindLarge(b *testing.B) {

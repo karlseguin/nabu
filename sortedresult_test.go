@@ -12,9 +12,9 @@ func TestSortedResultAddsValues(t *testing.T) {
   spec.Expect(result.add("over")).ToEqual(2)
   spec.Expect(result.add("9000")).ToEqual(3)
   spec.Expect(result.Len()).ToEqual(3)
-  spec.Expect(result.Data()[0]).ToEqual("its")
-  spec.Expect(result.Data()[1]).ToEqual("over")
-  spec.Expect(result.Data()[2]).ToEqual("9000")
+  spec.Expect(result.Ids()[0]).ToEqual("its")
+  spec.Expect(result.Ids()[1]).ToEqual("over")
+  spec.Expect(result.Ids()[2]).ToEqual("9000")
 }
 
 func TestSortedResultIsReleasedBackToTheDatabase(t *testing.T) {
@@ -36,7 +36,7 @@ func TestSortedResultCanBeSafelyReused(t *testing.T) {
   result.Close()
   spec.Expect(result.Len()).ToEqual(0)
   spec.Expect(result.add("ok")).ToEqual(1)
-  spec.Expect(result.Data()[0]).ToEqual("ok")
-  spec.Expect(len(result.Data())).ToEqual(1)
+  spec.Expect(result.Ids()[0]).ToEqual("ok")
+  spec.Expect(len(result.Ids())).ToEqual(1)
   spec.Expect(result.Len()).ToEqual(1)
 }

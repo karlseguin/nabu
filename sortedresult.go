@@ -5,19 +5,19 @@ package nabu
 type SortedResult struct {
   found int
   db *Database
-  data []string
+  ids []string
 }
 
 func newSortedResult(db *Database) *SortedResult{
   return &SortedResult{
     db: db,
     found: 0,
-    data: make([]string, db.maxLimit),
+    ids: make([]string, db.maxLimit),
   }
 }
 
-func (r *SortedResult) Data() []string {
-  return r.data[0:r.found]
+func (r *SortedResult) Ids() []string {
+  return r.ids[0:r.found]
 }
 
 func (r *SortedResult) Len() int {
@@ -30,7 +30,7 @@ func (r *SortedResult) Close() {
 }
 
 func (r *SortedResult) add(value string) int {
-  r.data[r.found] = value
+  r.ids[r.found] = value
   r.found++
   return r.found
 }

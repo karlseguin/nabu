@@ -2,7 +2,7 @@ package nabu
 
 type Result interface {
   Len() int
-  Data() []string
+  Ids() []string
   Close()
 }
 
@@ -12,7 +12,7 @@ type emptyResult struct {
   empty []string
 }
 
- func (r *emptyResult) Data() []string {
+ func (r *emptyResult) Ids() []string {
   return r.empty
 }
 

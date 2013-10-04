@@ -9,7 +9,7 @@ import (
 type UnsortedResult struct {
   found int
   db *Database
-  data []string
+  ids []string
   rank map[string]int
 }
 
@@ -17,13 +17,13 @@ func newUnsortedResult(db *Database) *UnsortedResult{
   return &UnsortedResult{
     db: db,
     found: 0,
-    data: make([]string, db.maxUnsortedSize),
+    ids: make([]string, db.maxUnsortedSize),
     rank: make(map[string]int, db.maxUnsortedSize),
   }
 }
 
-func (r *UnsortedResult) Data() []string {
-  return r.data[0:r.found]
+func (r *UnsortedResult) Ids() []string {
+  return r.ids[0:r.found]
 }
 
 func (r *UnsortedResult) Len() int {
@@ -31,23 +31,23 @@ func (r *UnsortedResult) Len() int {
 }
 
 func (r *UnsortedResult) add(value string, rank int) {
-  r.data[r.found] = value
+  r.ids[r.found] = value
   r.rank[value] = rank
   r.found++
 }
 
 func (r *UnsortedResult) finalize(q *Query) *UnsortedResult {
-  original := r.data
-  r.data = r.data[0:r.found]
+  original := r.ids
+  r.ids = r.ids[0:r.found]
   sort.Sort(r)
-  r.data = original
+  r.ids = original
   if r.found > q.limit { r.found = q.limit }
   if q.desc {
     for i := 0; i < r.found/2; i++ {
       j := r.found - i - 1
-      x := r.data[i]
-      r.data[i] = r.data[j]
-      r.data[j] = x
+      x := r.ids[i]
+      r.ids[i] = r.ids[j]
+      r.ids[j] = x
     }
   }
   return r
@@ -59,11 +59,11 @@ func (r *UnsortedResult) Close() {
 }
 
 func (r *UnsortedResult) Less(i, j int) bool {
-  return r.rank[r.data[i]] < r.rank[r.data[j]]
+  return r.rank[r.ids[i]] < r.rank[r.ids[j]]
 }
 
 func (r *UnsortedResult) Swap(i, j int) {
-  x := r.data[i]
-  r.data[i] = r.data[j]
-  r.data[j] = x
+  x := r.ids[i]
+  r.ids[i] = r.ids[j]
+  r.ids[j] = x
 }
