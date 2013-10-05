@@ -2,6 +2,7 @@ package nabu
 
 type Configuration struct {
   maxLimit int
+  maxTotal int
   defaultLimit int
   queryPoolSize int
   bucketCount uint32
@@ -13,6 +14,7 @@ type Configuration struct {
 func Configure() *Configuration {
   return &Configuration {
     maxLimit: 100,
+    maxTotal: 1000,
     bucketCount: 25,
     defaultLimit: 10,
     queryPoolSize: 512,
@@ -29,6 +31,11 @@ func (c *Configuration) DefaultLimit(limit int) *Configuration {
 
 func (c *Configuration) MaxLimit(max int) *Configuration {
   c.maxLimit = max
+  return c
+}
+
+func (c *Configuration) MaxTotal(max int) *Configuration {
+  c.maxTotal = max
   return c
 }
 

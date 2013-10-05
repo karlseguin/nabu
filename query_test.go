@@ -44,12 +44,13 @@ func TestQueryExecuteReleasesTheQuery(t *testing.T) {
 func TestQueryReleaseCanSafelyBeReused(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  query := db.Query("created").Where("age", "29").Desc().Limit(2)
+  query := db.Query("created").Where("age", "29").Desc().IncludeTotal().Limit(2)
   query.Execute()
   spec.Expect(query.desc).ToEqual(false)
   spec.Expect(query.limit).ToEqual(10)
   spec.Expect(query.offset).ToEqual(0)
   spec.Expect(query.indexCount).ToEqual(0)
+  spec.Expect(query.includeTotal).ToEqual(false)
 }
 
 // NO INDEXES
@@ -77,12 +78,99 @@ func TestQueryWithNoIndexWithOffset(t *testing.T) {
   assertResult(t, result.Ids(), []string{"c", "d", "i", "j", "k"})
 }
 
-func TestQueryWithNoUsingDescendingWithOffset(t *testing.T) {
+func TestQueryWithNoIndexesUsingDescendingWithOffset(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Offset(3).Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"d", "c", "b", "a"})
+}
+
+func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMore(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryWithNoIndexesProperlyCalculatesThatIsHasMore(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Limit(2).Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(true)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryWithNoIndexesProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Limit(3).Offset(5).Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryWithNoIndexesProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Limit(2).Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(true)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryWithNoIndexesProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Limit(3).Offset(5).Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryWithNoIndexesIncludesTotalCount(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Limit(3).Offset(5).Desc().IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(7)
+}
+
+func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure().MaxTotal(4))
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Limit(2).IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(4)
+}
+
+func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure().MaxTotal(4))
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Desc().Limit(2).Desc().IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(4)
 }
 
 // SORT-BASED QUERY
@@ -135,6 +223,112 @@ func TestQueryBySortDescendingWithOffset(t *testing.T) {
   assertResult(t, result.Ids(), []string{"h", "c"})
 }
 
+func TestQueryBySortProperlyCalculatesThatItHasNoMore(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryBySortProperlyCalculatesThatIsHasMore(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(true)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryBySortProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryBySortIncludesTotal(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(6)
+}
+
+func TestQueryBySortProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryBySortProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(true)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryBySortProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryBySortIncludesTotalDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).Desc().IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(6)
+}
+
+func TestQueryBySortLimitsTheTotal(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure().MaxTotal(3))
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(2).IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(3)
+}
+
+func TestQueryBySortLimitsTheTotalDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure().MaxTotal(3))
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Desc().IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(3)
+}
+
 // INDEX-BASED QUERY
 func TestQueryWithASingleIndexByIndex(t *testing.T) {
   db := New(Configure())
@@ -183,6 +377,112 @@ func TestQueryByIndexDescendingWithOffset(t *testing.T) {
   result := db.Query("created").Where("a", "x", "b", "y").Offset(2).Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"3"})
+}
+
+func TestQueryByIndexProperlyCalculatesThatItHasNoMore(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryByIndexProperlyCalculatesThatIsHasMore(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(true)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryByIndexProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryByIndexIncludesTotal(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(6)
+}
+
+func TestQueryByIndexProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryByIndexProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(true)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryByIndexProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Desc().Execute()
+  defer result.Close()
+  spec.Expect(result.HasMore()).ToEqual(false)
+  spec.Expect(result.Total()).ToEqual(-1)
+}
+
+func TestQueryByIndexIncludesTotalDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).Desc().IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(6)
+}
+
+func TestQueryByIndexLimitsTheTotal(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure().MaxTotal(3))
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(2).IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(3)
+}
+
+func TestQueryByIndexLimitsTheTotalDesc(t *testing.T) {
+  spec := gspec.New(t)
+  db := New(Configure().MaxTotal(3))
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  result := db.Query("created").Where("a", "1").Limit(2).Desc().IncludeTotal().Execute()
+  defer result.Close()
+  spec.Expect(result.Total()).ToEqual(3)
 }
 
 func BenchmarkFindLarge(b *testing.B) {

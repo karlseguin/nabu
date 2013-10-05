@@ -24,8 +24,9 @@ Nabu is in early development. These are the core missing features:
 
 * Management of sorted indexes (probably requiring a real implementation of a sortable index)
 * Persistence
-* Richer results (counts, and returning matching documents, not just ids)
+* Richer results (and returning matching documents, not just ids)
 * Richer querying (ORs, maybe)
+* Cached intermediary results
 
 ## Usage
 This is still being flushed out.
@@ -70,6 +71,7 @@ This is a chainable object. Available methods are:
 * `query.Offset(offset int)` the offset to start at
 * `query.Desc()` return results in descending order
 * `query.Where(index string, value string)` filter results 
+* `query.IncludeTotal()` include the total number of matches. By default, `result.Total()` is -1, and only `result.HasMore() bool` can be relied on
 
 Finally, results can be retrieved by calling the `Execute` method. The returned result *must* be closed after you're done with it:
 
@@ -94,6 +96,7 @@ Available options are:
 
 * `DefaultLimit(limit int)` [10] The default number of results to return
 * `MaxLimit(limit int)` [100] The maximum number of results to return
+* `MaxTotal(max int)` [1000] The maximum number of results to count
 * `BucketCount(count int)` [25] The number of buckets to use to store documents
 * `QueryPoolSize(size int)` [512] The number of concurrent queries to support
 * `MaxUnsortedSize(size int)` [100] When an index smaller than the specified size is part of the query, an optimized query path is used

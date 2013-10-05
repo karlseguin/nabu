@@ -14,6 +14,7 @@ type Query struct {
   sortLength int
   indexCount int
   indexes Indexes
+  includeTotal bool
 }
 
 func newQuery(db *Database) *Query {
@@ -57,6 +58,11 @@ func (q *Query) Offset(offset int) *Query {
   return q
 }
 
+func (q *Query) IncludeTotal() *Query {
+  q.includeTotal = true
+  return q
+}
+
 func (q *Query) Execute() Result {
   defer q.reset()
   return q.execute()
@@ -66,6 +72,7 @@ func (q *Query) reset() {
   q.offset = 0
   q.desc = false
   q.indexCount = 0
+  q.includeTotal = false
   q.limit = q.db.defaultLimit
   q.db.queryPool <- q
 }
@@ -106,6 +113,13 @@ func (q *Query) findWithNoIndexes() Result {
       if result.add(s.list[i]) == limit { break }
     }
   }
+  result.hasMore = sortLength > (q.offset + q.limit)
+  result.total = sortLength
+  if q.includeTotal == false {
+    result.total = -1
+  } else if result.total > q.db.maxTotal {
+    result.total = q.db.maxTotal
+  }
   return result
 }
 
@@ -130,6 +144,7 @@ func (q *Query) findByIndex(indexes Indexes) Result {
 
 func (q *Query) findBySort(indexes Indexes) Result {
   s := *q.sort
+  found := 0
   limit := q.limit
   sortLength := q.sortLength
   indexCount := q.indexCount
@@ -143,7 +158,14 @@ func (q *Query) findBySort(indexes Indexes) Result {
         }
       }
       result.total++
-      if result.total > q.offset && result.add(id) == limit { break }
+      if result.total > q.offset {
+        if found < limit {
+          result.add(id)
+          found++
+        } else if q.includeTotal == false || q.db.maxTotal == result.total {
+          break
+        }
+      }
       nomatchdesc:
     }
   } else {
@@ -155,9 +177,20 @@ func (q *Query) findBySort(indexes Indexes) Result {
         }
       }
       result.total++
-      if result.total > q.offset && result.add(id) == limit { break }
+      if result.total > q.offset {
+        if found < limit {
+          result.add(id)
+          found++
+        } else if q.includeTotal == false || q.db.maxTotal == result.total {
+          break
+        }
+      }
       nomatchasc:
     }
+  }
+  result.hasMore = result.total > (q.offset + q.limit)
+  if q.includeTotal == false {
+    result.total = -1
   }
   return result
 }
