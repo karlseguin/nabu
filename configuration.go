@@ -18,7 +18,7 @@ func Configure() *Configuration {
     bucketCount: 25,
     defaultLimit: 10,
     queryPoolSize: 512,
-    maxUnsortedSize: 100,
+    maxUnsortedSize: 5000,
     sortedResultPoolSize: 512,
     unsortedResultPoolSize: 512,
   }

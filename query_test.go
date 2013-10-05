@@ -23,13 +23,12 @@ func TestQueryPanicsOnUnknownSort(t *testing.T) {
   db.Query("cats")
 }
 
-func TestQueryPanicsOnUnknownIndex(t *testing.T) {
+func TestQueryEmptyIndex(t *testing.T) {
   spec := gspec.New(t)
-  defer func() {
-    spec.Expect(recover().(string)).ToEqual(`unknown index "abc$zzz"`)
-  }()
   db := SmallDB()
-  db.Query("created").Where("abc", "zzz")
+  res := db.Query("created").Where("abc", "zzz").Execute()
+  defer res.Close()
+  spec.Expect(res.Len()).ToEqual(0)
 }
 
 func TestQueryExecuteReleasesTheQuery(t *testing.T) {
@@ -485,27 +484,59 @@ func TestQueryByIndexLimitsTheTotalDesc(t *testing.T) {
   spec.Expect(result.Total()).ToEqual(3)
 }
 
-func BenchmarkFindLarge(b *testing.B) {
-  db := setupDb(100000, 80000, 100000)
+func BenchmarkFindLargeWithNoTotal(b *testing.B) {
+  db := setupDb(Configure(), 100000, 80000, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
     db.Query("created").Where("index_0", "_").Execute().Close()
   }
 }
 
-func BenchmarkFindAverage(b *testing.B) {
-  db := setupDb(100000, 50000, 100000, 1000, 100000)
+func BenchmarkFindLargeWithTotal(b *testing.B) {
+  db := setupDb(Configure(), 100000, 80000, 100000)
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    db.Query("created").Where("index_0", "_").IncludeTotal().Execute().Close()
+  }
+}
+
+func BenchmarkFindAverageWithNoTotal(b *testing.B) {
+  db := setupDb(Configure(), 100000, 50000, 100000, 1000, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
     db.Query("created").Where("index_0", "_", "index_2", "_").Execute().Close()
   }
 }
 
-func BenchmarkFindSmall(b *testing.B) {
-  db := setupDb(100000, 75000, 100000, 75000, 100000, 100, 100000)
+func BenchmarkFindAverageWithTotalUnderSortThreshold(b *testing.B) {
+  db := setupDb(Configure(), 100000, 50000, 100000, 4000, 100000)
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    db.Query("created").Where("index_0", "_", "index_2", "_").IncludeTotal().Execute().Close()
+  }
+}
+
+func BenchmarkFindAverageWithTotalOverSortThreshold(b *testing.B) {
+  db := setupDb(Configure(), 100000, 50000, 100000, 6000, 100000)
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    db.Query("created").Where("index_0", "_", "index_2", "_").IncludeTotal().Execute().Close()
+  }
+}
+
+func BenchmarkFindSmallWithNoTotal(b *testing.B) {
+  db := setupDb(Configure(), 100000, 75000, 100000, 75000, 100000, 100, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
     db.Query("created").Where("index_0", "_", "index_2", "_", "index_4", "_").Execute().Close()
+  }
+}
+
+func BenchmarkFindSmallWithTotal(b *testing.B) {
+  db := setupDb(Configure(), 100000, 75000, 100000, 75000, 100000, 100, 100000)
+  b.ResetTimer()
+  for i := 0; i < b.N; i++ {
+    db.Query("created").Where("index_0", "_", "index_2", "_", "index_4", "_").IncludeTotal().Execute().Close()
   }
 }
 
@@ -528,8 +559,8 @@ func assertResult(t *testing.T, actual []string, expected []string) {
   }
 }
 
-func setupDb(sortLength int, params ...int) *Database {
-  db := New(Configure())
+func setupDb(config *Configuration, sortLength int, params ...int) *Database {
+  db := New(config)
   sort := make([]string, sortLength)
   for i := 0; i < sortLength; i++ {
     sort[i] = strconv.Itoa(i)

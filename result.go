@@ -5,13 +5,15 @@ type Result interface {
   Total() int
   HasMore() bool
   Ids() []string
+  Docs() []Document
   Close()
 }
 
 var EmptyResult = &emptyResult{}
 
 type emptyResult struct {
-  empty []string
+  ids []string
+  documents []Document
 }
 
 func (r *emptyResult) Len() int {
@@ -27,7 +29,11 @@ func (r *emptyResult) HasMore() bool {
 }
 
 func (r *emptyResult) Ids() []string {
-  return r.empty
+  return r.ids
+}
+
+func (r *emptyResult) Docs() []Document {
+  return r.documents
 }
 
 func (r *emptyResult) Close() {}

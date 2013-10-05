@@ -1,13 +1,14 @@
 package nabu
 
 import (
-  "fmt"
   "sort"
 )
 
 type Query struct {
+  upto int
   limit int
   desc bool
+  empty bool
   sort *Sort
   offset int
   db *Database
@@ -31,7 +32,7 @@ func (q *Query) Where(params ...string) *Query {
   for i := 0; i < l; i+=2 {
     indexName := params[i] + "$" + params[i+1]
     if index, exists := q.db.indexes[indexName]; exists == false {
-      panic(fmt.Sprintf("unknown index %q", indexName))
+      q.empty = true
     } else {
       q.indexes[q.indexCount + (i/2)] = index
     }
@@ -44,6 +45,9 @@ func (q *Query) Limit(limit int) *Query {
   q.limit = limit
   if q.limit >  q.db.maxLimit {
     q.limit =  q.db.maxLimit
+  }
+  if q.includeTotal == false {
+    q.upto = q.limit + 1
   }
   return q
 }
@@ -60,20 +64,24 @@ func (q *Query) Offset(offset int) *Query {
 
 func (q *Query) IncludeTotal() *Query {
   q.includeTotal = true
+  q.upto = q.db.maxTotal
   return q
 }
 
 func (q *Query) Execute() Result {
   defer q.reset()
+  if q.empty { return EmptyResult }
   return q.execute()
 }
 
 func (q *Query) reset() {
   q.offset = 0
   q.desc = false
+  q.empty = false
   q.indexCount = 0
   q.includeTotal = false
   q.limit = q.db.defaultLimit
+  q.upto = q.db.defaultLimit + 1
   q.db.queryPool <- q
 }
 
@@ -92,8 +100,7 @@ func (q *Query) execute() Result {
   if firstLength == 0 {
     return EmptyResult
   }
-
-  if firstLength <= q.db.maxUnsortedSize && q.sortLength / firstLength > 100 {
+  if q.sortLength > firstLength*20 && firstLength <= q.db.maxUnsortedSize {
     return q.findByIndex(indexes)
   }
   return q.findBySort(indexes)
@@ -117,8 +124,8 @@ func (q *Query) findWithNoIndexes() Result {
   result.total = sortLength
   if q.includeTotal == false {
     result.total = -1
-  } else if result.total > q.db.maxTotal {
-    result.total = q.db.maxTotal
+  } else if result.total > q.upto {
+    result.total = q.upto
   }
   return result
 }
@@ -162,7 +169,7 @@ func (q *Query) findBySort(indexes Indexes) Result {
         if found < limit {
           result.add(id)
           found++
-        } else if q.includeTotal == false || q.db.maxTotal == result.total {
+        } else if result.total >= q.upto {
           break
         }
       }
@@ -181,7 +188,7 @@ func (q *Query) findBySort(indexes Indexes) Result {
         if found < limit {
           result.add(id)
           found++
-        } else if q.includeTotal == false || q.db.maxTotal == result.total {
+        } else if result.total >= q.upto {
           break
         }
       }

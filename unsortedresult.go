@@ -14,6 +14,7 @@ type UnsortedResult struct {
   ids []string
   original []string
   rank map[string]int
+  documents []Document
 }
 
 func newUnsortedResult(db *Database) *UnsortedResult{
@@ -23,6 +24,9 @@ func newUnsortedResult(db *Database) *UnsortedResult{
     original: make([]string, db.maxUnsortedSize),
     rank: make(map[string]int, db.maxUnsortedSize),
   }
+  min := db.maxUnsortedSize
+  if db.maxLimit < min { min = db.maxLimit }
+  r.documents = make([]Document, min)
   return r
 }
 
@@ -40,6 +44,13 @@ func (r *UnsortedResult) HasMore() bool {
 
 func (r *UnsortedResult) Ids() []string {
   return r.ids[0:r.found]
+}
+
+func (r *UnsortedResult) Docs() []Document {
+  for i := 0; i < r.found; i++ {
+    r.documents[i] = r.db.Get(r.ids[i])
+  }
+  return r.documents[0:r.found]
 }
 
 func (r *UnsortedResult) add(value string, rank int) {
@@ -83,8 +94,8 @@ func (r *UnsortedResult) finalize(q *Query) *UnsortedResult {
   r.hasMore = r.found != 0 && r.total > (q.offset + r.found)
   if q.includeTotal == false {
     r.total = -1
-  } else if q.db.maxTotal < r.total {
-    r.total = q.db.maxTotal
+  } else if q.upto < r.total {
+    r.total = q.upto
   }
   return r
 }

@@ -24,7 +24,6 @@ Nabu is in early development. These are the core missing features:
 
 * Management of sorted indexes (probably requiring a real implementation of a sortable index)
 * Persistence
-* Richer results (and returning matching documents, not just ids)
 * Richer querying (ORs, maybe)
 * Cached intermediary results
 
@@ -99,7 +98,7 @@ Available options are:
 * `MaxTotal(max int)` [1000] The maximum number of results to count
 * `BucketCount(count int)` [25] The number of buckets to use to store documents
 * `QueryPoolSize(size int)` [512] The number of concurrent queries to support
-* `MaxUnsortedSize(size int)` [100] When an index smaller than the specified size is part of the query, an optimized query path is used
+* `MaxUnsortedSize(size int)` [5000] When an index smaller than the specified size is part of the query, an optimized query path is used
 * `ResultsPoolSize(sorted int, unsorted int)` The pool size for sorted results as well as unsorted results
 
 Pools are currently blocking. Hooks will eventually be provided to gauge the health and appropriateness of pool sizes.

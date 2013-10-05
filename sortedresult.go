@@ -8,6 +8,7 @@ type SortedResult struct {
   db *Database
   hasMore bool
   ids []string
+  documents []Document
 }
 
 func newSortedResult(db *Database) *SortedResult{
@@ -15,6 +16,7 @@ func newSortedResult(db *Database) *SortedResult{
     db: db,
     found: 0,
     ids: make([]string, db.maxLimit),
+    documents: make([]Document, db.maxLimit),
   }
 }
 
@@ -32,6 +34,13 @@ func (r *SortedResult) HasMore() bool {
 
 func (r *SortedResult) Ids() []string {
   return r.ids[0:r.found]
+}
+
+func (r *SortedResult) Docs() []Document {
+  for i := 0; i < r.found; i++ {
+    r.documents[i] = r.db.Get(r.ids[i])
+  }
+  return r.documents[0:r.found]
 }
 
 func (r *SortedResult) Close() {
