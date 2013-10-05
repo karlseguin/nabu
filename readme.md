@@ -5,7 +5,7 @@ Nabu is not meant to be an authoritative database. Lacking the ability to fetch 
 
 Where does it fit then? Imagine that you're building an API. Like many APIs, yours is read-heavy. Various endpoints will expose paging, sorting and filtering capabilities. Maybe your API is geographically distributed. <strong>You want single digit uncached response times.</strong> A good solution is to send all writes to a centralized, authoritative system and asynchronously propagates changes to your read-optimized edge servers.
 
-Nabu is designed for systems that want to benefit from a distinct read data model.
+Nabu is designed for systems that want to benefit from this type of distinct read and write models and systems.
 
 ## Sacrifices
 Nabu isn't where business analysts go to gain insight, nor where developers go to debug issues. It's made to answer a specific set of queries within a predefined range of inputs. Flexibility is happily sacrificed. 

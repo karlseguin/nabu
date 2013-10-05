@@ -10,16 +10,18 @@ type UnsortedResult struct {
   found int
   db *Database
   ids []string
+  original []string
   rank map[string]int
 }
 
 func newUnsortedResult(db *Database) *UnsortedResult{
-  return &UnsortedResult{
+  r := &UnsortedResult{
     db: db,
     found: 0,
-    ids: make([]string, db.maxUnsortedSize),
+    original: make([]string, db.maxUnsortedSize),
     rank: make(map[string]int, db.maxUnsortedSize),
   }
+  return r
 }
 
 func (r *UnsortedResult) Ids() []string {
@@ -31,24 +33,41 @@ func (r *UnsortedResult) Len() int {
 }
 
 func (r *UnsortedResult) add(value string, rank int) {
-  r.ids[r.found] = value
+  r.original[r.found] = value
   r.rank[value] = rank
   r.found++
 }
 
 func (r *UnsortedResult) finalize(q *Query) *UnsortedResult {
-  original := r.ids
-  r.ids = r.ids[0:r.found]
+  r.ids = r.original[0:r.found]
   sort.Sort(r)
-  r.ids = original
-  if r.found > q.limit { r.found = q.limit }
+
   if q.desc {
+    to := r.found - q.offset
+    if to < 0 {
+      r.found = 0
+      return r
+    }
+    from := to - q.limit
+    if from < 0 { from  = 0}
+    r.ids = r.original[from:to]
+    r.found = to - from
     for i := 0; i < r.found/2; i++ {
       j := r.found - i - 1
       x := r.ids[i]
       r.ids[i] = r.ids[j]
       r.ids[j] = x
     }
+  } else {
+    from := q.offset
+    to := r.found
+    if r.found > q.limit { to = q.limit }
+    if from > to {
+      r.found = 0
+      return r
+    }
+    r.ids = r.original[from:to]
+    r.found = to - from
   }
   return r
 }

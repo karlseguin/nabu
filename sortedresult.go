@@ -4,6 +4,7 @@ package nabu
 
 type SortedResult struct {
   found int
+  total int
   db *Database
   ids []string
 }
@@ -26,6 +27,7 @@ func (r *SortedResult) Len() int {
 
 func (r *SortedResult) Close() {
   r.found = 0
+  r.total = 0
   r.db.sortedResults <- r
 }
 

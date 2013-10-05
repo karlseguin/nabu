@@ -98,11 +98,11 @@ func (q *Query) findWithNoIndexes() Result {
   sortLength := q.sortLength
   result := <- q.db.sortedResults
   if q.desc {
-    for i := sortLength-1; i >= 0; i-- {
+    for i := sortLength-1-q.offset; i >= 0; i-- {
       if result.add(s.list[i]) == limit { break }
     }
   } else {
-    for i := 0; i < sortLength; i++ {
+    for i := q.offset; i < sortLength; i++ {
       if result.add(s.list[i]) == limit { break }
     }
   }
@@ -142,7 +142,8 @@ func (q *Query) findBySort(indexes Indexes) Result {
           goto nomatchdesc
         }
       }
-      if result.add(id) == limit { break }
+      result.total++
+      if result.total > q.offset && result.add(id) == limit { break }
       nomatchdesc:
     }
   } else {
@@ -153,7 +154,8 @@ func (q *Query) findBySort(indexes Indexes) Result {
           goto nomatchasc
         }
       }
-      if result.add(id) == limit { break }
+      result.total++
+      if result.total > q.offset && result.add(id) == limit { break }
       nomatchasc:
     }
   }

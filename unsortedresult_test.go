@@ -5,22 +5,6 @@ import (
   "github.com/karlseguin/gspec"
 )
 
-func TestUnsortedResultAddsValues(t *testing.T) {
-  spec := gspec.New(t)
-  result := newUnsortedResult(SmallDB())
-  result.add("its", 43)
-  result.add("over", 2)
-  result.add("9000", 9001)
-  spec.Expect(result.Len()).ToEqual(3)
-
-  //todo the behavior of UnsortedResult
-  //when finalized hasn't been called is undefined,
-  //so why are we testing it?
-  spec.Expect(result.Ids()[0]).ToEqual("its")
-  spec.Expect(result.Ids()[1]).ToEqual("over")
-  spec.Expect(result.Ids()[2]).ToEqual("9000")
-}
-
 func TestUnsortedResultIsReleasedBackToTheDatabase(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
@@ -69,6 +53,53 @@ func TestUnsortedResultCanBeSortedToALimit(t *testing.T) {
   spec.Expect(result.Ids()[1]).ToEqual("its")
 }
 
+func TestUnsortedResultCanBeSortedToALimitWithOffset(t *testing.T) {
+  spec := gspec.New(t)
+  result := newUnsortedResult(SmallDB())
+  result.add("its", 43)
+  result.add("over", 2)
+  result.add("9000", 9001)
+  result.finalize(&Query{limit:2,offset:1})
+  spec.Expect(result.Len()).ToEqual(1)
+  spec.Expect(len(result.Ids())).ToEqual(1)
+  spec.Expect(result.Ids()[0]).ToEqual("its")
+}
+
+func TestUnsortedResultCanBeSortedToALimitWithOffsetDesc(t *testing.T) {
+  spec := gspec.New(t)
+  result := newUnsortedResult(SmallDB())
+  result.add("its", 43)
+  result.add("over", 2)
+  result.add("9000", 9001)
+  result.finalize(&Query{limit:2,offset:1,desc:true,})
+  spec.Expect(result.Len()).ToEqual(2)
+  spec.Expect(len(result.Ids())).ToEqual(2)
+  spec.Expect(result.Ids()[0]).ToEqual("its")
+  spec.Expect(result.Ids()[1]).ToEqual("over")
+}
+
+func TestUnsortedResultCanBeSortedWithOffsetBeyondLength(t *testing.T) {
+  spec := gspec.New(t)
+  result := newUnsortedResult(SmallDB())
+  result.add("its", 43)
+  result.add("over", 2)
+  result.add("9000", 9001)
+  result.finalize(&Query{limit:2,offset:3,})
+  spec.Expect(result.Len()).ToEqual(0)
+  spec.Expect(len(result.Ids())).ToEqual(0)
+}
+
+func TestUnsortedResultCanBeSortedWithOffsetBeyondLengthDesc(t *testing.T) {
+  spec := gspec.New(t)
+  result := newUnsortedResult(SmallDB())
+  result.add("its", 43)
+  result.add("over", 2)
+  result.add("9000", 9001)
+  result.finalize(&Query{limit:2,offset:3,desc:true,})
+  spec.Expect(result.Len()).ToEqual(0)
+  spec.Expect(len(result.Ids())).ToEqual(0)
+}
+
 func TestUnsortedResultCanBeSafelyReused(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
@@ -86,4 +117,5 @@ func TestUnsortedResultCanBeSafelyReused(t *testing.T) {
   spec.Expect(result.Ids()[1]).ToEqual("flow")
   spec.Expect(len(result.Ids())).ToEqual(2)
   spec.Expect(result.Len()).ToEqual(2)
+  spec.Expect(cap(result.ids)).ToEqual(100)
 }

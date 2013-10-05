@@ -33,7 +33,9 @@ func TestSortedResultCanBeSafelyReused(t *testing.T) {
   spec.Expect(result.add("its")).ToEqual(1)
   spec.Expect(result.add("over")).ToEqual(2)
   spec.Expect(result.add("9000")).ToEqual(3)
+  result.total = 44
   result.Close()
+  spec.Expect(result.total).ToEqual(0)
   spec.Expect(result.Len()).ToEqual(0)
   spec.Expect(result.add("ok")).ToEqual(1)
   spec.Expect(result.Ids()[0]).ToEqual("ok")

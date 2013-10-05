@@ -52,6 +52,7 @@ func TestQueryReleaseCanSafelyBeReused(t *testing.T) {
   spec.Expect(query.indexCount).ToEqual(0)
 }
 
+// NO INDEXES
 func TestQueryWithNoIndexes(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
@@ -68,6 +69,23 @@ func TestQueryWithNoIndexesDescending(t *testing.T) {
   assertResult(t, result.Ids(), []string{"k", "j", "i", "d", "c", "b", "a"})
 }
 
+func TestQueryWithNoIndexWithOffset(t *testing.T) {
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Offset(2).Execute()
+  defer result.Close()
+  assertResult(t, result.Ids(), []string{"c", "d", "i", "j", "k"})
+}
+
+func TestQueryWithNoUsingDescendingWithOffset(t *testing.T) {
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
+  result := db.Query("created").Desc().Offset(3).Execute()
+  defer result.Close()
+  assertResult(t, result.Ids(), []string{"d", "c", "b", "a"})
+}
+
+// SORT-BASED QUERY
 func TestQueryWithASingleIndexBySort(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
@@ -97,6 +115,27 @@ func TestQueryBySortDescending(t *testing.T) {
   assertResult(t, result.Ids(), []string{"k", "h", "c"})
 }
 
+func TestQueryWithTwoIndexesBySortWithOffset(t *testing.T) {
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  addIndex(db, "b$2", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
+  result := db.Query("created").Where("a", "1", "b", "2").Offset(1).Execute()
+  defer result.Close()
+  assertResult(t, result.Ids(), []string{"h", "k"})
+}
+
+func TestQueryBySortDescendingWithOffset(t *testing.T) {
+  db := New(Configure())
+  db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
+  addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
+  addIndex(db, "b$3", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
+  result := db.Query("created").Where("a", "1", "b", "3").Desc().Offset(1).Execute()
+  defer result.Close()
+  assertResult(t, result.Ids(), []string{"h", "c"})
+}
+
+// INDEX-BASED QUERY
 func TestQueryWithASingleIndexByIndex(t *testing.T) {
   db := New(Configure())
   db.AddSort("created", largeSort(1000))
@@ -107,7 +146,7 @@ func TestQueryWithASingleIndexByIndex(t *testing.T) {
 }
 
 func TestQueryWithTwoIndexesByIndex(t *testing.T) {
-   db := New(Configure())
+  db := New(Configure())
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$5", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
   addIndex(db, "b$4", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
@@ -124,6 +163,26 @@ func TestQueryByIndexDescending(t *testing.T) {
   result := db.Query("created").Where("a", "x", "b", "y").Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"9", "7", "3"})
+}
+
+func TestQueryWithTwoIndexesByIndexWithOffset(t *testing.T) {
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$5", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  addIndex(db, "b$4", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
+  result := db.Query("created").Where("a", "5", "b", "4").Offset(1).Execute()
+  defer result.Close()
+  assertResult(t, result.Ids(), []string{"7", "9"})
+}
+
+func TestQueryByIndexDescendingWithOffset(t *testing.T) {
+  db := New(Configure())
+  db.AddSort("created", largeSort(1000))
+  addIndex(db, "a$x", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
+  addIndex(db, "b$y", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
+  result := db.Query("created").Where("a", "x", "b", "y").Offset(2).Desc().Execute()
+  defer result.Close()
+  assertResult(t, result.Ids(), []string{"3"})
 }
 
 func BenchmarkFindLarge(b *testing.B) {
