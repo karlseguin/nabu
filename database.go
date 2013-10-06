@@ -7,6 +7,7 @@ import (
 )
 
 type Database struct {
+  cache *Cache
   *Configuration
   queryPool chan *Query
   sortLock sync.RWMutex
@@ -21,6 +22,7 @@ type Database struct {
 func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
+    cache: newCache(c),
     sorts: make(map[string]*Sort),
     indexes: make(map[string]*Index),
     queryPool: make(chan *Query, c.queryPoolSize),
@@ -154,7 +156,7 @@ func (d *Database) addDocumentIndex(indexName string, id string) {
     d.indexLock.Lock()
     index, exists = d.indexes[indexName]
     if exists == false {
-      index = newIndex()
+      index = newIndex(indexName)
       d.indexes[indexName] = index
     }
     d.indexLock.Unlock()

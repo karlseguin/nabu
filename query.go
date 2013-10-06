@@ -71,7 +71,26 @@ func (q *Query) IncludeTotal() *Query {
 func (q *Query) Execute() Result {
   defer q.reset()
   if q.empty { return EmptyResult }
-  return q.execute()
+
+  indexCount := q.indexCount
+  if indexCount == 0 {
+    return q.findWithNoIndexes()
+  }
+  indexes := q.indexes[0:indexCount]
+  indexes.rlock()
+  if indexCount == 1 {
+    defer indexes.runlock()
+    return q.execute(indexes)
+  }
+
+  sort.Sort(indexes)
+  cached, ok := q.db.cache.Get(indexes)
+  if ok {
+    indexes.runlock()
+    return q.execute(cached)
+  }
+  defer indexes.runlock()
+  return q.execute(indexes)
 }
 
 func (q *Query) reset() {
@@ -85,18 +104,8 @@ func (q *Query) reset() {
   q.db.queryPool <- q
 }
 
-func (q *Query) execute() Result {
-  indexCount := q.indexCount
-  if indexCount == 0 {
-    return q.findWithNoIndexes()
-  }
-  q.indexes.rlock(q.indexCount)
-  defer q.indexes.runlock(q.indexCount)
-
-  indexes := q.indexes[0:q.indexCount]
-  sort.Sort(indexes)
+func (q *Query) execute(indexes Indexes) Result {
   firstLength := len(indexes[0].ids)
-
   if firstLength == 0 {
     return EmptyResult
   }

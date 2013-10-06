@@ -4,6 +4,7 @@ type Configuration struct {
   maxLimit int
   maxTotal int
   defaultLimit int
+  cacheWorkers int
   queryPoolSize int
   bucketCount uint32
   maxUnsortedSize int
@@ -16,6 +17,7 @@ func Configure() *Configuration {
     maxLimit: 100,
     maxTotal: 1000,
     bucketCount: 25,
+    cacheWorkers: 2,
     defaultLimit: 10,
     queryPoolSize: 512,
     maxUnsortedSize: 5000,
@@ -60,4 +62,10 @@ func (c *Configuration) ResultsPoolSize(sorted, unsorted int) *Configuration {
   return c
 }
 
-
+func (c *Configuration) CacheWorkers(workers int) *Configuration {
+  if workers < 1 {
+    workers = 1
+  }
+  c.cacheWorkers = workers
+  return c
+}

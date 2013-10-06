@@ -5,12 +5,14 @@ import (
 )
 
 type Index struct {
+  name string
   sync.RWMutex
   ids map[string]struct{}
 }
 
-func newIndex() *Index {
+func newIndex(name string) *Index {
   return &Index{
+    name: name,
     ids: make(map[string]struct{}),
   }
 }
@@ -50,10 +52,10 @@ func (indexes Indexes) Swap(i, j int) {
   indexes[j] = x
 }
 
-func (indexes Indexes) rlock(count int) {
-  for i := 0; i < count; i++ { indexes[i].RLock() }
+func (indexes Indexes) rlock() {
+  for _, index := range indexes { index.RLock() }
 }
 
-func (indexes Indexes) runlock(count int) {
-  for i := 0; i < count; i++ { indexes[i].RUnlock() }
+func (indexes Indexes) runlock() {
+  for _, index := range indexes { index.RUnlock() }
 }

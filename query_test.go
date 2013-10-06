@@ -541,7 +541,7 @@ func BenchmarkFindSmallWithTotal(b *testing.B) {
 }
 
 func makeIndex(values []string) *Index {
-  index := newIndex()
+  index := newIndex("_")
   for _, v := range values {
     index.ids[v] = struct{}{}
   }
@@ -570,12 +570,13 @@ func setupDb(config *Configuration, sortLength int, params ...int) *Database {
   for i := 0; i < len(params); i += 2 {
     length := params[i]
     maxvalue := int32(params[i+1])
-    index := newIndex()
+    name := "index_" + strconv.Itoa(i) + "$_"
+    index := newIndex(name)
     for j := 0; j < length; j++ {
       value := strconv.Itoa(int(rand.Int31n(maxvalue)))
       index.ids[value] = struct{}{}
     }
-    addIndex(db, "index_" + strconv.Itoa(i) + "$_", index)
+    addIndex(db, name, index)
   }
   return db
 }
