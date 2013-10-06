@@ -22,7 +22,6 @@ type Database struct {
 func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
-    cache: newCache(c),
     sorts: make(map[string]*Sort),
     indexes: make(map[string]*Index),
     queryPool: make(chan *Query, c.queryPoolSize),
@@ -30,7 +29,7 @@ func New(c *Configuration) *Database {
     sortedResults: make(chan *SortedResult, c.sortedResultPoolSize),
     unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
   }
-
+  db.cache = newCache(db)
   for i := 0; i < int(c.bucketCount); i++ {
     db.buckets[i] = &Bucket{lookup: make(map[string]Document),}
   }

@@ -21,7 +21,7 @@ type Query struct {
 func newQuery(db *Database) *Query {
   q := &Query{
     db: db,
-    indexes: make([]*Index, 10),
+    indexes: make(Indexes, db.maxIndexesPerQuery),
   }
   q.reset()
   return q
