@@ -8,13 +8,13 @@ type Query struct {
   upto int
   limit int
   desc bool
-  empty bool
   sort *Sort
   offset int
   db *Database
   sortLength int
   indexCount int
   indexes Indexes
+  indexNames []string
   includeTotal bool
 }
 
@@ -22,6 +22,7 @@ func newQuery(db *Database) *Query {
   q := &Query{
     db: db,
     indexes: make(Indexes, db.maxIndexesPerQuery),
+    indexNames: make([]string, db.maxIndexesPerQuery),
   }
   q.reset()
   return q
@@ -30,12 +31,7 @@ func newQuery(db *Database) *Query {
 func (q *Query) Where(params ...string) *Query {
   l := len(params)
   for i := 0; i < l; i+=2 {
-    indexName := params[i] + "$" + params[i+1]
-    if index, exists := q.db.indexes[indexName]; exists == false {
-      q.empty = true
-    } else {
-      q.indexes[q.indexCount + (i/2)] = index
-    }
+    q.indexNames[q.indexCount + (i/2)] = params[i] + "$" + params[i+1]
   }
   q.indexCount += l / 2
   return q
@@ -70,33 +66,39 @@ func (q *Query) IncludeTotal() *Query {
 
 func (q *Query) Execute() Result {
   defer q.reset()
-  if q.empty { return EmptyResult }
-
   indexCount := q.indexCount
   if indexCount == 0 {
     return q.findWithNoIndexes()
   }
-  indexes := q.indexes[0:indexCount]
-  indexes.rlock()
   if indexCount == 1 {
+    indexes := q.loadIndexes()
+    if indexes == nil { return EmptyResult }
+    indexes.rlock()
     defer indexes.runlock()
     return q.execute(indexes)
   }
 
-  sort.Sort(indexes)
-  cached, ok := q.db.cache.Get(indexes)
-  if ok {
-    indexes.runlock()
-    return q.execute(cached)
-  }
+  cached, ok := q.db.cache.Get(q.indexNames[0:indexCount])
+  if ok { return q.execute(cached) }
+
+  indexes := q.loadIndexes()
+  if indexes == nil { return EmptyResult }
+  indexes.rlock()
   defer indexes.runlock()
+  sort.Sort(indexes)
   return q.execute(indexes)
+}
+
+func (q *Query) loadIndexes() Indexes {
+  if q.db.lookupIndexes(q.indexNames[0:q.indexCount], q.indexes) == false {
+    return nil
+  }
+  return q.indexes[0:q.indexCount]
 }
 
 func (q *Query) reset() {
   q.offset = 0
   q.desc = false
-  q.empty = false
   q.indexCount = 0
   q.includeTotal = false
   q.limit = q.db.defaultLimit

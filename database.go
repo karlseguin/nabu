@@ -185,3 +185,15 @@ func (d *Database) removeDocument(doc Document, id string) {
   defer bucket.Unlock()
   delete(bucket.lookup, id)
 }
+
+func (d *Database) lookupIndexes(indexNames []string, target Indexes) bool {
+  ok := true
+  d.indexLock.RLock()
+  d.indexLock.RUnlock()
+  for i, name := range indexNames {
+    index, exists := d.indexes[name]
+    target[i] = index
+    if exists == false { ok = false }
+  }
+  return ok
+}

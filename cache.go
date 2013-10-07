@@ -1,47 +1,50 @@
 package nabu
 
 import (
-  "time"
+  "sort"
   "sync"
+  "strings"
 )
 
 type Cache struct {
   sync.RWMutex
   db *Database
-  queue chan *CacheItem
+  newQueue chan *CacheItem
   lookup map[string]*CacheItem
 }
 
 func newCache(db *Database) *Cache {
   c := &Cache {
     db: db,
-    queue: make(chan *CacheItem, 8196),
     lookup: make(map[string]*CacheItem),
+    newQueue: make(chan *CacheItem, 1024),
   }
   for i := 0; i < db.cacheWorkers; i++ { go c.workers() }
   return c
 }
 
-func (c *Cache) Get(indexes Indexes) (Indexes, bool) {
-  if cached, exists := c.get(indexes); exists {
+func (c *Cache) Get(indexNames []string) (Indexes, bool) {
+  if cached, exists := c.get(indexNames); exists {
     return cached, true
   }
-  return indexes, false
+  return nil, false
 }
 
-func (c *Cache) get(indexes Indexes) (Indexes, bool) {
-  key := "_#"
-  for _, index := range indexes { key += index.name + "#" }
-
+func (c *Cache) get(indexNames []string) (Indexes, bool) {
+  sort.Strings(indexNames)
+  key := strings.Join(indexNames, "&")
   c.RLock()
   item, exists := c.lookup[key]
   c.RUnlock()
   if exists && item.touchIfReady() {
-    println("ssss")
     return item.index, true
   }
 
-  item = newCacheItem(c.db, key, indexes)
+  item = newCacheItem(c.db, key, indexNames)
+  if item == nil { //happens when we have an invalid index
+    return nil, false
+  }
+
   c.Lock()
   if _, exists := c.lookup[key]; exists {
     c.Unlock()
@@ -50,7 +53,7 @@ func (c *Cache) get(indexes Indexes) (Indexes, bool) {
   c.lookup[key] = item
   c.Unlock()
   select {
-    case c.queue <- item:
+    case c.newQueue <- item:
     default:
   }
   return nil, false
@@ -58,35 +61,28 @@ func (c *Cache) get(indexes Indexes) (Indexes, bool) {
 
 func (c *Cache) workers() {
   for {
-    item := <- c.queue
-    if item.accessed.IsZero() {
-      c.build(item)
-    } else {
-      c.rebuild(item)
+    select {
+    case item := <- c.newQueue:
+      item.build()
     }
   }
 }
 
-func (c *Cache) build(item *CacheItem) {
-  item.rebuild()
-  //item.accessed = time.Now()
-}
+// func (c *Cache) rebuild(item *CacheItem) {
+//   now := time.Now()
+//   item.RLock()
+//   accessed := item.accessed
+//   item.RUnlock()
 
-func (c *Cache) rebuild(item *CacheItem) {
-  now := time.Now()
-  item.RLock()
-  accessed := item.accessed
-  item.RUnlock()
+//   if accessed.Before(now.Add(time.Minute * -5)) {
+//     c.remove(item)
+//   } else {
+//     item.rebuild()
+//   }
+// }
 
-  if accessed.Before(now.Add(time.Minute * -5)) {
-    c.remove(item)
-  } else {
-    item.rebuild()
-  }
-}
-
-func (c *Cache) remove(item *CacheItem) {
-  c.Lock()
-  defer c.Unlock()
-  delete(c.lookup, item.key)
-}
+// func (c *Cache) remove(item *CacheItem) {
+//   c.Lock()
+//   defer c.Unlock()
+//   delete(c.lookup, item.key)
+// }

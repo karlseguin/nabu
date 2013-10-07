@@ -1,7 +1,7 @@
 package nabu
 
 import (
-  "fmt"
+  "sort"
   "sync"
   "time"
 )
@@ -15,16 +15,16 @@ type CacheItem struct {
   accessed time.Time
 }
 
-func newCacheItem(db *Database, key string, indexes Indexes) *CacheItem {
-  ci := &CacheItem{
+func newCacheItem(db *Database, key string, indexNames []string) *CacheItem {
+  sources := make(Indexes, len(indexNames))
+  if db.lookupIndexes(indexNames, sources) == false {
+    return nil
+  }
+  return &CacheItem {
     key: key,
+    sources: sources,
     index: make(Indexes, 1),
-    sources: make(Indexes, db.maxIndexesPerQuery),
   }
-  for i, index := range indexes {
-    ci.sources[i] = index
-  }
-  return ci
 }
 
 func (ci *CacheItem) touchIfReady() bool {
@@ -37,22 +37,24 @@ func (ci *CacheItem) touchIfReady() bool {
   return true
 }
 
-func (ci *CacheItem) rebuild() {
+func (ci *CacheItem) build() {
+  sort.Sort(ci.sources)
+  indexes := ci.sources
+  first := indexes[0]
+  cached := newIndex(ci.key)
+  indexCount := len(ci.sources)
 
+  for id, _ := range first.ids {
+    for j := 1; j < indexCount; j++ {
+      if _, exists := indexes[j].ids[id]; exists == false {
+        goto nomatch
+      }
+    }
+    cached.ids[id] = struct{}{}
+    nomatch:
+  }
+  ci.index[0] = cached
+  ci.Lock()
+  ci.accessed = time.Now()
+  ci.Unlock()
 }
-// func (t *CacheTask) Run(db *Database) *Item {
-//   defer t.Close()
-//   first := indexes[0]
-//   cached := newIndex(name)
-//   indexCount := len(indexes)
-//   for id, _ := range first.ids {
-//     for j := 1; j < indexCount; j++ {
-//       if _, exists := indexes[j].ids[id]; exists == false {
-//         goto nomatch
-//       }
-//     }
-//     cached.ids[id] = struct{}{}
-//     nomatch:
-//   }
-//   return Indexes{cached}
-// }
