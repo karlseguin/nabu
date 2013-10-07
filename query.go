@@ -78,7 +78,7 @@ func (q *Query) Execute() Result {
     return q.execute(indexes)
   }
 
-  cached, ok := q.db.cache.Get(q.indexNames[0:indexCount])
+  cached, ok := q.db.cache.get(q.indexNames[0:indexCount])
   if ok { return q.execute(cached) }
 
   indexes := q.loadIndexes()

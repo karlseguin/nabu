@@ -161,6 +161,7 @@ func (d *Database) addDocumentIndex(indexName string, id string) {
     d.indexLock.Unlock()
   }
   index.Add(id)
+  d.cache.changed(indexName, id, true)
 }
 
 func (d *Database) removeDocumentIndex(indexName string, id string) {
@@ -169,6 +170,7 @@ func (d *Database) removeDocumentIndex(indexName string, id string) {
   d.indexLock.RUnlock()
   if exists == false { return }
   index.Remove(id)
+  d.cache.changed(indexName, id, false)
 }
 
 func (d *Database) addDocument(doc Document, id string, index int) {

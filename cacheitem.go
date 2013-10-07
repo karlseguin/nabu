@@ -38,6 +38,8 @@ func (ci *CacheItem) touchIfReady() bool {
 }
 
 func (ci *CacheItem) build() {
+  ci.sources.rlock()
+  defer ci.sources.runlock()
   sort.Sort(ci.sources)
   indexes := ci.sources
   first := indexes[0]
@@ -57,4 +59,30 @@ func (ci *CacheItem) build() {
   ci.Lock()
   ci.accessed = time.Now()
   ci.Unlock()
+}
+
+func (ci *CacheItem) change(change *Change) {
+  if change.added {
+    ci.added(change)
+  } else {
+    ci.removed(change)
+  }
+}
+
+func (ci *CacheItem) added(change *Change) {
+  id := change.id
+  indexes := ci.sources
+  indexes.rlock()
+  defer indexes.runlock()
+  indexCount := len(indexes)
+  for i := 0; i < indexCount; i++ {
+    if _, exists := indexes[i].ids[id]; exists == false {
+      return
+    }
+  }
+  ci.index[0].Add(id)
+}
+
+func (ci *CacheItem) removed(change *Change) {
+  ci.index[0].Remove(change.id)
 }

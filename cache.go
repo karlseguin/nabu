@@ -10,7 +10,10 @@ type Cache struct {
   sync.RWMutex
   db *Database
   newQueue chan *CacheItem
+  changeQueue chan *Change
   lookup map[string]*CacheItem
+  bucketLock sync.RWMutex
+  buckets map[string]*ChangeBucket
 }
 
 func newCache(db *Database) *Cache {
@@ -18,19 +21,25 @@ func newCache(db *Database) *Cache {
     db: db,
     lookup: make(map[string]*CacheItem),
     newQueue: make(chan *CacheItem, 1024),
+    changeQueue: make(chan *Change, 4096),
+    buckets: make(map[string]*ChangeBucket),
   }
   for i := 0; i < db.cacheWorkers; i++ { go c.workers() }
   return c
 }
 
-func (c *Cache) Get(indexNames []string) (Indexes, bool) {
-  if cached, exists := c.get(indexNames); exists {
+func (c *Cache) get(indexNames []string) (Indexes, bool) {
+  if cached, exists := c.doget(indexNames); exists {
     return cached, true
   }
   return nil, false
 }
 
-func (c *Cache) get(indexNames []string) (Indexes, bool) {
+func (c *Cache) changed(indexName string, id string, added bool) {
+  c.changeQueue <- &Change{id: id, indexName: indexName, added: added,}
+}
+
+func (c *Cache) doget(indexNames []string) (Indexes, bool) {
   sort.Strings(indexNames)
   key := strings.Join(indexNames, "&")
   c.RLock()
@@ -63,26 +72,32 @@ func (c *Cache) workers() {
   for {
     select {
     case item := <- c.newQueue:
+      c.reverseIndex(item)
       item.build()
+    case change := <- c.changeQueue:
+      c.applyChange(change)
     }
   }
 }
 
-// func (c *Cache) rebuild(item *CacheItem) {
-//   now := time.Now()
-//   item.RLock()
-//   accessed := item.accessed
-//   item.RUnlock()
+func (c *Cache) reverseIndex(item *CacheItem) {
+  c.bucketLock.Lock()
+  defer c.bucketLock.Unlock()
+  for _, index := range item.sources {
+    name := index.name
+    bucket, exists := c.buckets[name]
+    if exists == false {
+      bucket = newChangeBucket(name)
+      c.buckets[name] = bucket
+    }
+    bucket.add(item)
+  }
+}
 
-//   if accessed.Before(now.Add(time.Minute * -5)) {
-//     c.remove(item)
-//   } else {
-//     item.rebuild()
-//   }
-// }
-
-// func (c *Cache) remove(item *CacheItem) {
-//   c.Lock()
-//   defer c.Unlock()
-//   delete(c.lookup, item.key)
-// }
+func (c *Cache) applyChange(change *Change) {
+  c.bucketLock.RLock()
+  bucket, exists := c.buckets[change.indexName]
+  c.bucketLock.RUnlock()
+  if exists == false { return }
+  bucket.process(change)
+}
