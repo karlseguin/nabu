@@ -26,7 +26,7 @@ func TestQueryPanicsOnUnknownSort(t *testing.T) {
 func TestQueryEmptyIndex(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  res := db.Query("created").Where("abc", "zzz").Execute()
+  res := db.Query("created").NoCache().Where("abc", "zzz").Execute()
   defer res.Close()
   spec.Expect(res.Len()).ToEqual(0)
 }
@@ -34,7 +34,7 @@ func TestQueryEmptyIndex(t *testing.T) {
 func TestQueryExecuteReleasesTheQuery(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  query := db.Query("created").Where("age", "29")
+  query := db.Query("created").NoCache().Where("age", "29")
   spec.Expect(len(db.queryPool)).ToEqual(0)
   query.Execute()
   spec.Expect(len(db.queryPool)).ToEqual(1)
@@ -43,18 +43,19 @@ func TestQueryExecuteReleasesTheQuery(t *testing.T) {
 func TestQueryReleaseCanSafelyBeReused(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
-  query := db.Query("created").Where("age", "29").Desc().IncludeTotal().Limit(2)
+  query := db.Query("created").NoCache().Where("age", "29").Desc().IncludeTotal().NoCache().Limit(2)
   query.Execute()
   spec.Expect(query.desc).ToEqual(false)
   spec.Expect(query.limit).ToEqual(10)
   spec.Expect(query.offset).ToEqual(0)
+  spec.Expect(query.cache).ToEqual(true)
   spec.Expect(query.indexCount).ToEqual(0)
   spec.Expect(query.includeTotal).ToEqual(false)
 }
 
 // NO INDEXES
 func TestQueryWithNoIndexes(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Execute()
   defer result.Close()
@@ -62,7 +63,7 @@ func TestQueryWithNoIndexes(t *testing.T) {
 }
 
 func TestQueryWithNoIndexesDescending(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Execute()
   defer result.Close()
@@ -70,7 +71,7 @@ func TestQueryWithNoIndexesDescending(t *testing.T) {
 }
 
 func TestQueryWithNoIndexWithOffset(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Offset(2).Execute()
   defer result.Close()
@@ -78,7 +79,7 @@ func TestQueryWithNoIndexWithOffset(t *testing.T) {
 }
 
 func TestQueryWithNoIndexesUsingDescendingWithOffset(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Offset(3).Execute()
   defer result.Close()
@@ -87,7 +88,7 @@ func TestQueryWithNoIndexesUsingDescendingWithOffset(t *testing.T) {
 
 func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMore(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Execute()
   defer result.Close()
@@ -97,7 +98,7 @@ func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMore(t *testing.T) {
 
 func TestQueryWithNoIndexesProperlyCalculatesThatIsHasMore(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(2).Execute()
   defer result.Close()
@@ -107,7 +108,7 @@ func TestQueryWithNoIndexesProperlyCalculatesThatIsHasMore(t *testing.T) {
 
 func TestQueryWithNoIndexesProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(3).Offset(5).Execute()
   defer result.Close()
@@ -117,7 +118,7 @@ func TestQueryWithNoIndexesProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) 
 
 func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Execute()
   defer result.Close()
@@ -127,7 +128,7 @@ func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
 
 func TestQueryWithNoIndexesProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(2).Desc().Execute()
   defer result.Close()
@@ -137,7 +138,7 @@ func TestQueryWithNoIndexesProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
 
 func TestQueryWithNoIndexesProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(3).Offset(5).Desc().Execute()
   defer result.Close()
@@ -147,7 +148,7 @@ func TestQueryWithNoIndexesProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing
 
 func TestQueryWithNoIndexesIncludesTotalCount(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(3).Offset(5).Desc().IncludeTotal().Execute()
   defer result.Close()
@@ -156,7 +157,7 @@ func TestQueryWithNoIndexesIncludesTotalCount(t *testing.T) {
 
 func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().MaxTotal(4))
+  db := New(Configure().CacheWorkers(0).MaxTotal(4))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(2).IncludeTotal().Execute()
   defer result.Close()
@@ -165,7 +166,7 @@ func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
 
 func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().MaxTotal(4))
+  db := New(Configure().CacheWorkers(0).MaxTotal(4))
   db.AddSort("created", []string{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Limit(2).Desc().IncludeTotal().Execute()
   defer result.Close()
@@ -174,60 +175,60 @@ func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
 
 // SORT-BASED QUERY
 func TestQueryWithASingleIndexBySort(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "z"}))
-  result := db.Query("created").Where("a", "1").Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"b", "c", "f", "h"})
 }
 
 func TestQueryWithTwoIndexesBySort(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
   addIndex(db, "b$2", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
-  result := db.Query("created").Where("a", "1", "b", "2").Execute()
+  result := db.Query("created").NoCache().Where("a", "1", "b", "2").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"c", "h", "k"})
 }
 
 func TestQueryBySortDescending(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
   addIndex(db, "b$3", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
-  result := db.Query("created").Where("a", "1", "b", "3").Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1", "b", "3").Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"k", "h", "c"})
 }
 
 func TestQueryWithTwoIndexesBySortWithOffset(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
   addIndex(db, "b$2", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
-  result := db.Query("created").Where("a", "1", "b", "2").Offset(1).Execute()
+  result := db.Query("created").NoCache().Where("a", "1", "b", "2").Offset(1).Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"h", "k"})
 }
 
 func TestQueryBySortDescendingWithOffset(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
   addIndex(db, "b$3", makeIndex([]string{"a", "c", "e", "h","k", "j", "z"}))
-  result := db.Query("created").Where("a", "1", "b", "3").Desc().Offset(1).Execute()
+  result := db.Query("created").NoCache().Where("a", "1", "b", "3").Desc().Offset(1).Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"h", "c"})
 }
 
 func TestQueryBySortProperlyCalculatesThatItHasNoMore(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -235,10 +236,10 @@ func TestQueryBySortProperlyCalculatesThatItHasNoMore(t *testing.T) {
 
 func TestQueryBySortProperlyCalculatesThatIsHasMore(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(true)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -246,10 +247,10 @@ func TestQueryBySortProperlyCalculatesThatIsHasMore(t *testing.T) {
 
 func TestQueryBySortProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Offset(5).Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -257,20 +258,20 @@ func TestQueryBySortProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
 
 func TestQueryBySortIncludesTotal(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(1).Offset(3).IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(6)
 }
 
 func TestQueryBySortProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Desc().Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -278,10 +279,10 @@ func TestQueryBySortProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
 
 func TestQueryBySortProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Desc().Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(true)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -289,10 +290,10 @@ func TestQueryBySortProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
 
 func TestQueryBySortProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Offset(5).Desc().Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -300,90 +301,90 @@ func TestQueryBySortProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
 
 func TestQueryBySortIncludesTotalDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).Desc().IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(1).Offset(3).Desc().IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(6)
 }
 
 func TestQueryBySortLimitsTheTotal(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().MaxTotal(3))
+  db := New(Configure().CacheWorkers(0).MaxTotal(3))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(2).IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(3)
 }
 
 func TestQueryBySortLimitsTheTotalDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().MaxTotal(3))
+  db := New(Configure().CacheWorkers(0).MaxTotal(3))
   db.AddSort("created", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]string{"b", "c", "f", "h", "g", "k", "z"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Desc().IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Desc().IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(3)
 }
 
 // INDEX-BASED QUERY
 func TestQueryWithASingleIndexByIndex(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$66", makeIndex([]string{"1", "4", "7", "-1"}))
-  result := db.Query("created").Where("a", "66").Execute()
+  result := db.Query("created").NoCache().Where("a", "66").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"1", "4", "7"})
 }
 
 func TestQueryWithTwoIndexesByIndex(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$5", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
   addIndex(db, "b$4", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
-  result := db.Query("created").Where("a", "5", "b", "4").Execute()
+  result := db.Query("created").NoCache().Where("a", "5", "b", "4").Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"3", "7", "9"})
 }
 
 func TestQueryByIndexDescending(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$x", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
   addIndex(db, "b$y", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
-  result := db.Query("created").Where("a", "x", "b", "y").Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "x", "b", "y").Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"9", "7", "3"})
 }
 
 func TestQueryWithTwoIndexesByIndexWithOffset(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$5", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
   addIndex(db, "b$4", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
-  result := db.Query("created").Where("a", "5", "b", "4").Offset(1).Execute()
+  result := db.Query("created").NoCache().Where("a", "5", "b", "4").Offset(1).Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"7", "9"})
 }
 
 func TestQueryByIndexDescendingWithOffset(t *testing.T) {
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$x", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
   addIndex(db, "b$y", makeIndex([]string{"1", "3", "5", "7","9", "10", "-1"}))
-  result := db.Query("created").Where("a", "x", "b", "y").Offset(2).Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "x", "b", "y").Offset(2).Desc().Execute()
   defer result.Close()
   assertResult(t, result.Ids(), []string{"3"})
 }
 
 func TestQueryByIndexProperlyCalculatesThatItHasNoMore(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -391,10 +392,10 @@ func TestQueryByIndexProperlyCalculatesThatItHasNoMore(t *testing.T) {
 
 func TestQueryByIndexProperlyCalculatesThatIsHasMore(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(true)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -402,10 +403,10 @@ func TestQueryByIndexProperlyCalculatesThatIsHasMore(t *testing.T) {
 
 func TestQueryByIndexProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Offset(5).Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -413,20 +414,20 @@ func TestQueryByIndexProperlyCalculatesHasNoMoreDuetoOffset(t *testing.T) {
 
 func TestQueryByIndexIncludesTotal(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(1).Offset(3).IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(6)
 }
 
 func TestQueryByIndexProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Desc().Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -434,10 +435,10 @@ func TestQueryByIndexProperlyCalculatesThatItHasNoMoreDesc(t *testing.T) {
 
 func TestQueryByIndexProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Desc().Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(true)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -445,10 +446,10 @@ func TestQueryByIndexProperlyCalculatesThatIsHasMoreDesc(t *testing.T) {
 
 func TestQueryByIndexProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Offset(5).Desc().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Offset(5).Desc().Execute()
   defer result.Close()
   spec.Expect(result.HasMore()).ToEqual(false)
   spec.Expect(result.Total()).ToEqual(-1)
@@ -456,30 +457,30 @@ func TestQueryByIndexProperlyCalculatesHasNoMoreDuetoOffsetDesc(t *testing.T) {
 
 func TestQueryByIndexIncludesTotalDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure())
+  db := New(Configure().CacheWorkers(0))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(1).Offset(3).Desc().IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(1).Offset(3).Desc().IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(6)
 }
 
 func TestQueryByIndexLimitsTheTotal(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().MaxTotal(3))
+  db := New(Configure().CacheWorkers(0).MaxTotal(3))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(2).IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(3)
 }
 
 func TestQueryByIndexLimitsTheTotalDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().MaxTotal(3))
+  db := New(Configure().CacheWorkers(0).MaxTotal(3))
   db.AddSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]string{"2", "3", "6", "7", "8", "9", "-1"}))
-  result := db.Query("created").Where("a", "1").Limit(2).Desc().IncludeTotal().Execute()
+  result := db.Query("created").NoCache().Where("a", "1").Limit(2).Desc().IncludeTotal().Execute()
   defer result.Close()
   spec.Expect(result.Total()).ToEqual(3)
 }

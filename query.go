@@ -10,6 +10,7 @@ type Query struct {
   desc bool
   sort *Sort
   offset int
+  cache bool
   db *Database
   sortLength int
   indexCount int
@@ -21,6 +22,7 @@ type Query struct {
 func newQuery(db *Database) *Query {
   q := &Query{
     db: db,
+    cache: true,
     indexes: make(Indexes, db.maxIndexesPerQuery),
     indexNames: make([]string, db.maxIndexesPerQuery),
   }
@@ -34,6 +36,11 @@ func (q *Query) Where(params ...string) *Query {
     q.indexNames[q.indexCount + (i/2)] = params[i] + "$" + params[i+1]
   }
   q.indexCount += l / 2
+  return q
+}
+
+func (q *Query) NoCache() *Query {
+  q.cache = false
   return q
 }
 
@@ -78,8 +85,10 @@ func (q *Query) Execute() Result {
     return q.execute(indexes)
   }
 
-  cached, ok := q.db.cache.get(q.indexNames[0:indexCount])
-  if ok { return q.execute(cached) }
+  if q.cache == true {
+    cached, ok := q.db.cache.get(q.indexNames[0:indexCount])
+    if ok { return q.execute(cached) }
+  }
 
   indexes := q.loadIndexes()
   if indexes == nil { return EmptyResult }
@@ -98,6 +107,7 @@ func (q *Query) loadIndexes() Indexes {
 
 func (q *Query) reset() {
   q.offset = 0
+  q.cache = true
   q.desc = false
   q.indexCount = 0
   q.includeTotal = false

@@ -70,9 +70,6 @@ func (c *Configuration) MaxIndexesPerQuery(max int) *Configuration {
 }
 
 func (c *Configuration) CacheWorkers(workers int) *Configuration {
-  if workers < 1 {
-    workers = 1
-  }
   c.cacheWorkers = workers
   return c
 }
