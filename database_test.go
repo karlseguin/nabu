@@ -85,11 +85,14 @@ func (d *Doc) ReadMeta(meta *Meta) {
 }
 
 func SmallDB() *Database {
-  c := Configure().QueryPoolSize(1).ResultsPoolSize(1, 1)
-  db := New(c)
+  db := New(SmallConfig())
   db.AddSort("created", []string{})
   addIndex(db, "age$29", newIndex("age$29"))
   return db
+}
+
+func SmallConfig() *Configuration {
+  return Configure().QueryPoolSize(1).ResultsPoolSize(1, 1).CacheWorkers(0)
 }
 
 func addIndex(db *Database, name string, index *Index) {
