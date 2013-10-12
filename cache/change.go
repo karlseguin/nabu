@@ -1,4 +1,4 @@
-package nabu
+package cache
 
 import (
   "sync"
@@ -13,17 +13,17 @@ type Change struct {
 type ChangeBucket struct {
   sync.RWMutex
   indexName string
-  items map[string]*CacheItem
+  items map[string]*Item
 }
 
 func newChangeBucket(indexName string) *ChangeBucket {
   return &ChangeBucket {
     indexName: indexName,
-    items: make(map[string]*CacheItem),
+    items: make(map[string]*Item),
   }
 }
 
-func (cb *ChangeBucket) add(item *CacheItem) {
+func (cb *ChangeBucket) add(item *Item) {
   cb.Lock()
   defer cb.Unlock()
   cb.items[item.key] = item

@@ -2,28 +2,29 @@ package nabu
 
 import (
   "sort"
+  "nabu/indexes"
 )
 
 type Query struct {
   upto int
   limit int
   desc bool
-  sort *Sort
   offset int
   cache bool
   db *Database
   sortLength int
   indexCount int
-  indexes Indexes
-  indexNames []string
   includeTotal bool
+  sort *indexes.Sort
+  indexNames []string
+  indexes indexes.Indexes
 }
 
 func newQuery(db *Database) *Query {
   q := &Query{
     db: db,
     cache: true,
-    indexes: make(Indexes, db.maxIndexesPerQuery),
+    indexes: make(indexes.Indexes, db.maxIndexesPerQuery),
     indexNames: make([]string, db.maxIndexesPerQuery),
   }
   q.reset()
@@ -80,26 +81,26 @@ func (q *Query) Execute() Result {
   if indexCount == 1 {
     indexes := q.loadIndexes()
     if indexes == nil { return EmptyResult }
-    indexes.rlock()
-    defer indexes.runlock()
+    indexes.RLock()
+    defer indexes.RUnlock()
     return q.execute(indexes)
   }
 
   if q.cache == true {
-    cached, ok := q.db.cache.get(q.indexNames[0:indexCount])
+    cached, ok := q.db.cache.Get(q.indexNames[0:indexCount])
     if ok { return q.execute(cached) }
   }
 
   indexes := q.loadIndexes()
   if indexes == nil { return EmptyResult }
-  indexes.rlock()
-  defer indexes.runlock()
+  indexes.RLock()
+  defer indexes.RUnlock()
   sort.Sort(indexes)
   return q.execute(indexes)
 }
 
-func (q *Query) loadIndexes() Indexes {
-  if q.db.lookupIndexes(q.indexNames[0:q.indexCount], q.indexes) == false {
+func (q *Query) loadIndexes() indexes.Indexes {
+  if q.db.LookupIndexes(q.indexNames[0:q.indexCount], q.indexes) == false {
     return nil
   }
   return q.indexes[0:q.indexCount]
@@ -116,8 +117,8 @@ func (q *Query) reset() {
   q.db.queryPool <- q
 }
 
-func (q *Query) execute(indexes Indexes) Result {
-  firstLength := len(indexes[0].ids)
+func (q *Query) execute(indexes indexes.Indexes) Result {
+  firstLength := len(indexes[0].Ids)
   if firstLength == 0 {
     return EmptyResult
   }
@@ -134,11 +135,11 @@ func (q *Query) findWithNoIndexes() Result {
   result := <- q.db.sortedResults
   if q.desc {
     for i := sortLength-1-q.offset; i >= 0; i-- {
-      if result.add(s.list[i]) == limit { break }
+      if result.add(s.List[i]) == limit { break }
     }
   } else {
     for i := q.offset; i < sortLength; i++ {
-      if result.add(s.list[i]) == limit { break }
+      if result.add(s.List[i]) == limit { break }
     }
   }
   result.hasMore = sortLength > (q.offset + q.limit)
@@ -151,14 +152,14 @@ func (q *Query) findWithNoIndexes() Result {
   return result
 }
 
-func (q *Query) findByIndex(indexes Indexes) Result {
+func (q *Query) findByIndex(indexes indexes.Indexes) Result {
   first := indexes[0]
   indexCount := len(indexes)
-  ranking := q.sort.lookup
+  ranking := q.sort.Lookup
   result := <- q.db.unsortedResults
-  for id, _ := range first.ids {
+  for id, _ := range first.Ids {
     for j := 1; j < indexCount; j++ {
-      if _, exists := indexes[j].ids[id]; exists == false {
+      if _, exists := indexes[j].Ids[id]; exists == false {
         goto nomatch
       }
     }
@@ -170,7 +171,7 @@ func (q *Query) findByIndex(indexes Indexes) Result {
   return result.finalize(q)
 }
 
-func (q *Query) findBySort(indexes Indexes) Result {
+func (q *Query) findBySort(indexes indexes.Indexes) Result {
   s := *q.sort
   found := 0
   limit := q.limit
@@ -179,9 +180,9 @@ func (q *Query) findBySort(indexes Indexes) Result {
   result := <- q.db.sortedResults
   if q.desc {
     for i := sortLength-1; i >= 0; i-- {
-      id := s.list[i]
+      id := s.List[i]
       for j := 0; j < indexCount; j++ {
-        if _, exists := indexes[j].ids[id]; exists == false {
+        if _, exists := indexes[j].Ids[id]; exists == false {
           goto nomatchdesc
         }
       }
@@ -198,9 +199,9 @@ func (q *Query) findBySort(indexes Indexes) Result {
     }
   } else {
     for i := 0; i < sortLength; i++ {
-      id := s.list[i]
+      id := s.List[i]
       for j := 0; j < indexCount; j++ {
-        if _, exists := indexes[j].ids[id]; exists == false {
+        if _, exists := indexes[j].Ids[id]; exists == false {
           goto nomatchasc
         }
       }

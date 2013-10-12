@@ -1,45 +1,54 @@
-package nabu
+package cache
 
 import (
   "sort"
   "sync"
   "strings"
+  "nabu/indexes"
 )
+
+type IndexFetcher interface {
+  LookupIndexes(indexNames []string, target indexes.Indexes) bool
+}
 
 type Cache struct {
   sync.RWMutex
-  db *Database
-  newQueue chan *CacheItem
+  fetcher IndexFetcher
+  newQueue chan *Item
   changeQueue chan *Change
-  lookup map[string]*CacheItem
+  lookup map[string]*Item
   bucketLock sync.RWMutex
   buckets map[string]*ChangeBucket
 }
 
-func newCache(db *Database) *Cache {
+func New(fetcher IndexFetcher, workerCount int) *Cache {
   c := &Cache {
-    db: db,
-    lookup: make(map[string]*CacheItem),
-    newQueue: make(chan *CacheItem, 1024),
+    fetcher: fetcher,
+    lookup: make(map[string]*Item),
+    newQueue: make(chan *Item, 1024),
     changeQueue: make(chan *Change, 4096),
     buckets: make(map[string]*ChangeBucket),
   }
-  for i := 0; i < db.cacheWorkers; i++ { go c.workers() }
+  for i := 0; i < workerCount; i++ { go c.workers() }
   return c
 }
 
-func (c *Cache) get(indexNames []string) (Indexes, bool) {
-  if cached, exists := c.doget(indexNames); exists {
+func (c *Cache) Changed(indexName string, id string, added bool) {
+  c.changeQueue <- &Change{
+    id: id,
+    indexName: indexName,
+    added: added,
+  }
+}
+
+func (c *Cache) Get(indexNames []string) (indexes.Indexes, bool) {
+  if cached, exists := c.get(indexNames); exists {
     return cached, true
   }
   return nil, false
 }
 
-func (c *Cache) changed(indexName string, id string, added bool) {
-  c.changeQueue <- &Change{id: id, indexName: indexName, added: added,}
-}
-
-func (c *Cache) doget(indexNames []string) (Indexes, bool) {
+func (c *Cache) get(indexNames []string) (indexes.Indexes, bool) {
   sort.Strings(indexNames)
   key := strings.Join(indexNames, "&")
   c.RLock()
@@ -49,7 +58,7 @@ func (c *Cache) doget(indexNames []string) (Indexes, bool) {
     return item.index, true
   }
 
-  item = newCacheItem(c.db, key, indexNames)
+  item = newItem(c.fetcher, key, indexNames)
   if item == nil { //happens when we have an invalid index
     return nil, false
   }
@@ -80,11 +89,11 @@ func (c *Cache) workers() {
   }
 }
 
-func (c *Cache) reverseIndex(item *CacheItem) {
+func (c *Cache) reverseIndex(item *Item) {
   c.bucketLock.Lock()
   defer c.bucketLock.Unlock()
   for _, index := range item.sources {
-    name := index.name
+    name := index.Name
     bucket, exists := c.buckets[name]
     if exists == false {
       bucket = newChangeBucket(name)

@@ -1,38 +1,38 @@
-package nabu
+package indexes
 
 import (
   "sync"
 )
 
 type Index struct {
-  name string
   sync.RWMutex
-  ids map[string]struct{}
+  Name string
+  Ids map[string]struct{}
 }
 
-func newIndex(name string) *Index {
+func New(name string) *Index {
   return &Index{
-    name: name,
-    ids: make(map[string]struct{}),
+    Name: name,
+    Ids: make(map[string]struct{}),
   }
 }
 
 func (i *Index) Add(id string) {
   i.Lock()
   defer i.Unlock()
-  i.ids[id] = struct{}{}
+  i.Ids[id] = struct{}{}
 }
 
 func (i *Index) Remove(id string) {
   i.Lock()
   defer i.Unlock()
-  delete(i.ids, id)
+  delete(i.Ids, id)
 }
 
 func (i *Index) Contains(id string) bool {
   i.RLock()
   defer i.RUnlock()
-  _, exists := i.ids[id]
+  _, exists := i.Ids[id]
   return exists
 }
 
@@ -43,7 +43,7 @@ func (indexes Indexes) Len() int {
 }
 
 func (indexes Indexes) Less(i, j int) bool {
-  return len(indexes[i].ids) < len(indexes[j].ids)
+  return len(indexes[i].Ids) < len(indexes[j].Ids)
 }
 
 func (indexes Indexes) Swap(i, j int) {
@@ -52,10 +52,10 @@ func (indexes Indexes) Swap(i, j int) {
   indexes[j] = x
 }
 
-func (indexes Indexes) rlock() {
+func (indexes Indexes) RLock() {
   for _, index := range indexes { index.RLock() }
 }
 
-func (indexes Indexes) runlock() {
+func (indexes Indexes) RUnlock() {
   for _, index := range indexes { index.RUnlock() }
 }

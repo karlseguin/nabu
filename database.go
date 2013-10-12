@@ -4,32 +4,34 @@ import (
   "fmt"
   "sync"
   "hash/fnv"
+  "nabu/cache"
+  "nabu/indexes"
 )
 
 type Database struct {
-  cache *Cache
+  cache *cache.Cache
   *Configuration
   queryPool chan *Query
   sortLock sync.RWMutex
-  sorts map[string]*Sort
   buckets map[int]*Bucket
   indexLock sync.RWMutex
-  indexes map[string]*Index
+  sorts map[string]*indexes.Sort
   sortedResults chan *SortedResult
+  indexes map[string]*indexes.Index
   unsortedResults chan *UnsortedResult
 }
 
 func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
-    sorts: make(map[string]*Sort),
-    indexes: make(map[string]*Index),
+    sorts: make(map[string]*indexes.Sort),
+    indexes: make(map[string]*indexes.Index),
     queryPool: make(chan *Query, c.queryPoolSize),
     buckets: make(map[int]*Bucket, c.bucketCount),
     sortedResults: make(chan *SortedResult, c.sortedResultPoolSize),
     unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
   }
-  db.cache = newCache(db)
+  db.cache = cache.New(db, db.cacheWorkers)
   for i := 0; i < int(c.bucketCount); i++ {
     db.buckets[i] = &Bucket{lookup: make(map[string]Document),}
   }
@@ -57,12 +59,10 @@ func (db *Database) Query(name string) *Query {
 }
 
 func (db *Database) AddSort(name string, list []string) {
-  s := &Sort {
-    list: list,
-    lookup: make(map[string]int, len(list)),
-  }
-  for i := 0; i < len(list); i++ {
-    s.lookup[list[i]] = i
+  l := len(list)
+  s := indexes.NewSort(l)
+  for i := 0; i < l; i++ {
+    s.Add(list[i], i)
   }
   db.sortLock.Lock()
   defer db.sortLock.Unlock()
@@ -155,13 +155,13 @@ func (d *Database) addDocumentIndex(indexName string, id string) {
     d.indexLock.Lock()
     index, exists = d.indexes[indexName]
     if exists == false {
-      index = newIndex(indexName)
+      index = indexes.New(indexName)
       d.indexes[indexName] = index
     }
     d.indexLock.Unlock()
   }
   index.Add(id)
-  d.cache.changed(indexName, id, true)
+  d.cache.Changed(indexName, id, true)
 }
 
 func (d *Database) removeDocumentIndex(indexName string, id string) {
@@ -170,7 +170,7 @@ func (d *Database) removeDocumentIndex(indexName string, id string) {
   d.indexLock.RUnlock()
   if exists == false { return }
   index.Remove(id)
-  d.cache.changed(indexName, id, false)
+  d.cache.Changed(indexName, id, false)
 }
 
 func (d *Database) addDocument(doc Document, id string, index int) {
@@ -188,7 +188,7 @@ func (d *Database) removeDocument(doc Document, id string) {
   delete(bucket.lookup, id)
 }
 
-func (d *Database) lookupIndexes(indexNames []string, target Indexes) bool {
+func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bool {
   ok := true
   d.indexLock.RLock()
   d.indexLock.RUnlock()

@@ -4,6 +4,7 @@ import (
   "testing"
   "strconv"
   "math/rand"
+  "nabu/indexes"
   "github.com/karlseguin/gspec"
 )
 
@@ -541,10 +542,10 @@ func BenchmarkFindSmallWithTotal(b *testing.B) {
   }
 }
 
-func makeIndex(values []string) *Index {
-  index := newIndex("_")
+func makeIndex(values []string) *indexes.Index {
+  index := indexes.New("_")
   for _, v := range values {
-    index.ids[v] = struct{}{}
+    index.Ids[v] = struct{}{}
   }
   return index
 }
@@ -572,10 +573,10 @@ func setupDb(config *Configuration, sortLength int, params ...int) *Database {
     length := params[i]
     maxvalue := int32(params[i+1])
     name := "index_" + strconv.Itoa(i) + "$_"
-    index := newIndex(name)
+    index := indexes.New(name)
     for j := 0; j < length; j++ {
       value := strconv.Itoa(int(rand.Int31n(maxvalue)))
-      index.ids[value] = struct{}{}
+      index.Ids[value] = struct{}{}
     }
     addIndex(db, name, index)
   }

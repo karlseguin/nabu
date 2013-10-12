@@ -2,6 +2,7 @@ package nabu
 
 import (
   "testing"
+  "nabu/indexes"
   "github.com/karlseguin/gspec"
 )
 
@@ -87,7 +88,7 @@ func (d *Doc) ReadMeta(meta *Meta) {
 func SmallDB() *Database {
   db := New(SmallConfig())
   db.AddSort("created", []string{})
-  addIndex(db, "age$29", newIndex("age$29"))
+  addIndex(db, "age$29", indexes.New("age$29"))
   return db
 }
 
@@ -95,7 +96,7 @@ func SmallConfig() *Configuration {
   return Configure().QueryPoolSize(1).ResultsPoolSize(1, 1).CacheWorkers(0)
 }
 
-func addIndex(db *Database, name string, index *Index) {
-  index.name = name
+func addIndex(db *Database, name string, index *indexes.Index) {
+  index.Name = name
   db.indexes[name] = index
 }
