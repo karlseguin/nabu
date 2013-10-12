@@ -9,13 +9,13 @@ import (
 )
 
 type Database struct {
-  cache *cache.Cache
   *Configuration
+  cache *cache.Cache
   queryPool chan *Query
   sortLock sync.RWMutex
   buckets map[int]*Bucket
   indexLock sync.RWMutex
-  sorts map[string]*indexes.Sort
+  sorts map[string]indexes.Sort
   sortedResults chan *SortedResult
   indexes map[string]*indexes.Index
   unsortedResults chan *UnsortedResult
@@ -24,7 +24,7 @@ type Database struct {
 func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
-    sorts: make(map[string]*indexes.Sort),
+    sorts: make(map[string]indexes.Sort),
     indexes: make(map[string]*indexes.Index),
     queryPool: make(chan *Query, c.queryPoolSize),
     buckets: make(map[int]*Bucket, c.bucketCount),
@@ -58,15 +58,23 @@ func (db *Database) Query(name string) *Query {
   return q
 }
 
-func (db *Database) AddSort(name string, list []string) {
-  l := len(list)
-  s := indexes.NewSort(l)
-  for i := 0; i < l; i++ {
-    s.Add(list[i], i)
+func (db *Database) LoadSort(name string, ids []string) {
+  db.sortLock.RLock()
+  s, exists := db.sorts[name]
+  db.sortLock.RUnlock()
+  if exists {
+    s.Load(ids)
+    return
   }
+
   db.sortLock.Lock()
-  defer db.sortLock.Unlock()
-  db.sorts[name] = s
+  s, exists = db.sorts[name]
+  if exists == false {
+    s = indexes.NewSort()
+    db.sorts[name] = s
+  }
+  db.sortLock.Unlock()
+  s.Load(ids)
 }
 
 func (d *Database) Get(id string) Document {

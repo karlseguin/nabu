@@ -15,7 +15,7 @@ type Query struct {
   sortLength int
   indexCount int
   includeTotal bool
-  sort *indexes.Sort
+  sort indexes.Sort
   indexNames []string
   indexes indexes.Indexes
 }
@@ -75,6 +75,7 @@ func (q *Query) IncludeTotal() *Query {
 func (q *Query) Execute() Result {
   defer q.reset()
   indexCount := q.indexCount
+  q.sortLength = q.sort.Len()
   if indexCount == 0 {
     return q.findWithNoIndexes()
   }
@@ -106,42 +107,33 @@ func (q *Query) loadIndexes() indexes.Indexes {
   return q.indexes[0:q.indexCount]
 }
 
-func (q *Query) reset() {
-  q.offset = 0
-  q.cache = true
-  q.desc = false
-  q.indexCount = 0
-  q.includeTotal = false
-  q.limit = q.db.defaultLimit
-  q.upto = q.db.defaultLimit + 1
-  q.db.queryPool <- q
-}
-
 func (q *Query) execute(indexes indexes.Indexes) Result {
   firstLength := len(indexes[0].Ids)
   if firstLength == 0 {
     return EmptyResult
   }
-  if q.sortLength > firstLength*20 && firstLength <= q.db.maxUnsortedSize {
+  if q.sort.CanRank() && q.sortLength > firstLength*20 && firstLength <= q.db.maxUnsortedSize {
     return q.findByIndex(indexes)
   }
   return q.findBySort(indexes)
 }
 
 func (q *Query) findWithNoIndexes() Result {
-  s := *q.sort
   limit := q.limit
   sortLength := q.sortLength
   result := <- q.db.sortedResults
+  var iterator indexes.Iterator
   if q.desc {
-    for i := sortLength-1-q.offset; i >= 0; i-- {
-      if result.add(s.List[i]) == limit { break }
-    }
+    iterator = q.sort.Backwards(q.offset)
   } else {
-    for i := q.offset; i < sortLength; i++ {
-      if result.add(s.List[i]) == limit { break }
-    }
+    iterator = q.sort.Forwards(q.offset)
   }
+
+  for id := iterator.Current(); id != ""; id = iterator.Next() {
+    if result.add(id) == limit { break }
+  }
+  iterator.Close()
+
   result.hasMore = sortLength > (q.offset + q.limit)
   result.total = sortLength
   if q.includeTotal == false {
@@ -155,7 +147,6 @@ func (q *Query) findWithNoIndexes() Result {
 func (q *Query) findByIndex(indexes indexes.Indexes) Result {
   first := indexes[0]
   indexCount := len(indexes)
-  ranking := q.sort.Lookup
   result := <- q.db.unsortedResults
   for id, _ := range first.Ids {
     for j := 1; j < indexCount; j++ {
@@ -163,7 +154,7 @@ func (q *Query) findByIndex(indexes indexes.Indexes) Result {
         goto nomatch
       }
     }
-    if rank, exists := ranking[id]; exists {
+    if rank, exists := q.sort.Rank(id); exists {
       result.add(id, rank)
     }
     nomatch:
@@ -171,55 +162,51 @@ func (q *Query) findByIndex(indexes indexes.Indexes) Result {
   return result.finalize(q)
 }
 
-func (q *Query) findBySort(indexes indexes.Indexes) Result {
-  s := *q.sort
+func (q *Query) findBySort(idx indexes.Indexes) Result {
   found := 0
   limit := q.limit
-  sortLength := q.sortLength
   indexCount := q.indexCount
+  var iterator indexes.Iterator
+
   result := <- q.db.sortedResults
   if q.desc {
-    for i := sortLength-1; i >= 0; i-- {
-      id := s.List[i]
-      for j := 0; j < indexCount; j++ {
-        if _, exists := indexes[j].Ids[id]; exists == false {
-          goto nomatchdesc
-        }
-      }
-      result.total++
-      if result.total > q.offset {
-        if found < limit {
-          result.add(id)
-          found++
-        } else if result.total >= q.upto {
-          break
-        }
-      }
-      nomatchdesc:
-    }
+    iterator = q.sort.Backwards(0)
   } else {
-    for i := 0; i < sortLength; i++ {
-      id := s.List[i]
-      for j := 0; j < indexCount; j++ {
-        if _, exists := indexes[j].Ids[id]; exists == false {
-          goto nomatchasc
-        }
-      }
-      result.total++
-      if result.total > q.offset {
-        if found < limit {
-          result.add(id)
-          found++
-        } else if result.total >= q.upto {
-          break
-        }
-      }
-      nomatchasc:
-    }
+    iterator = q.sort.Forwards(0)
   }
+
+  for id := iterator.Current(); id != ""; id = iterator.Next() {
+    for j := 0; j < indexCount; j++ {
+      if _, exists := idx[j].Ids[id]; exists == false {
+        goto nomatchdesc
+      }
+    }
+    result.total++
+    if result.total > q.offset {
+      if found < limit {
+        result.add(id)
+        found++
+      } else if result.total >= q.upto {
+        break
+      }
+    }
+    nomatchdesc:
+  }
+  iterator.Close()
   result.hasMore = result.total > (q.offset + q.limit)
   if q.includeTotal == false {
     result.total = -1
   }
   return result
+}
+
+func (q *Query) reset() {
+  q.offset = 0
+  q.cache = true
+  q.desc = false
+  q.indexCount = 0
+  q.includeTotal = false
+  q.limit = q.db.defaultLimit
+  q.upto = q.db.defaultLimit + 1
+  q.db.queryPool <- q
 }

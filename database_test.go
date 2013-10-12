@@ -12,7 +12,7 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
   conf := Configure().QueryPoolSize(2).DefaultLimit(3).MaxLimit(4).
             MaxUnsortedSize(5).ResultsPoolSize(6, 7).BucketCount(8)
   db := New(conf)
-  db.AddSort("x", []string{})
+  db.LoadSort("x", []string{})
   spec.Expect(len(db.queryPool)).ToEqual(2)
   spec.Expect(len(db.sortedResults)).ToEqual(6)
   spec.Expect(len(db.unsortedResults)).ToEqual(7)
@@ -87,7 +87,7 @@ func (d *Doc) ReadMeta(meta *Meta) {
 
 func SmallDB() *Database {
   db := New(SmallConfig())
-  db.AddSort("created", []string{})
+  db.LoadSort("created", []string{})
   addIndex(db, "age$29", indexes.New("age$29"))
   return db
 }
