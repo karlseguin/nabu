@@ -201,6 +201,7 @@ func (q *Query) findBySort(idx indexes.Indexes) Result {
 }
 
 func (q *Query) reset() {
+  q.sort = nil
   q.offset = 0
   q.cache = true
   q.desc = false
