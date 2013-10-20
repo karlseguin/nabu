@@ -3,7 +3,8 @@ package nabu
 import (
   "fmt"
   "sync"
-  "hash/fnv"
+  // "hash/fnv"
+  "nabu/key"
   "nabu/cache"
   "nabu/indexes"
 )
@@ -33,7 +34,7 @@ func New(c *Configuration) *Database {
   }
   db.cache = cache.New(db, db.cacheWorkers)
   for i := 0; i < int(c.bucketCount); i++ {
-    db.buckets[i] = &Bucket{lookup: make(map[string]Document),}
+    db.buckets[i] = &Bucket{lookup: make(map[key.Type]Document),}
   }
   for i := 0; i < c.queryPoolSize; i++ {
     newQuery(db) //it automatically enqueues itself
@@ -58,7 +59,7 @@ func (db *Database) Query(name string) *Query {
   return q
 }
 
-func (db *Database) LoadSort(name string, ids []string) {
+func (db *Database) LoadSort(name string, ids []key.Type) {
   db.sortLock.RLock()
   s, exists := db.sorts[name]
   db.sortLock.RUnlock()
@@ -77,7 +78,7 @@ func (db *Database) LoadSort(name string, ids []string) {
   s.Load(ids)
 }
 
-func (d *Database) Get(id string) Document {
+func (d *Database) Get(id key.Type) Document {
   return d.getFromBucket(id, d.getBucket(id))
 }
 
@@ -102,7 +103,7 @@ func (d *Database) Remove(doc Document) {
   d.removeDocument(doc, id)
 }
 
-func (d *Database) RemoveById(id string) {
+func (d *Database) RemoveById(id key.Type) {
   bucket := d.getBucket(id)
   doc := d.getFromBucket(id, bucket)
   if doc != nil {
@@ -110,7 +111,7 @@ func (d *Database) RemoveById(id string) {
   }
 }
 
-func (d *Database) getMeta(id string, bucket int) *Meta {
+func (d *Database) getMeta(id key.Type, bucket int) *Meta {
   doc := d.getFromBucket(id, bucket)
   if doc == nil { return nil }
   meta := newMeta()
@@ -118,17 +119,15 @@ func (d *Database) getMeta(id string, bucket int) *Meta {
   return meta
 }
 
-func (d *Database) getFromBucket(id string, index int) Document {
+func (d *Database) getFromBucket(id key.Type, index int) Document {
   bucket := d.buckets[index]
   bucket.RLock()
   defer bucket.RUnlock()
   return bucket.lookup[id]
 }
 
-func (d *Database) getBucket(key string) int {
-  h := fnv.New32a()
-  h.Write([]byte(key))
-  return int(h.Sum32() % d.bucketCount)
+func (d *Database) getBucket(key key.Type) int {
+  return key.Bucket(d.bucketCount)
 }
 
 func (d *Database) insert(doc Document, meta *Meta, bucket int) {
@@ -155,7 +154,7 @@ func (d *Database) replace(doc Document, meta *Meta, old *Meta, bucket int) {
   d.addDocument(doc, id, bucket)
 }
 
-func (d *Database) addDocumentIndex(indexName string, id string) {
+func (d *Database) addDocumentIndex(indexName string, id key.Type) {
   d.indexLock.RLock()
   index, exists := d.indexes[indexName]
   d.indexLock.RUnlock()
@@ -172,7 +171,7 @@ func (d *Database) addDocumentIndex(indexName string, id string) {
   d.cache.Changed(indexName, id, true)
 }
 
-func (d *Database) removeDocumentIndex(indexName string, id string) {
+func (d *Database) removeDocumentIndex(indexName string, id key.Type) {
   d.indexLock.RLock()
   index, exists := d.indexes[indexName]
   d.indexLock.RUnlock()
@@ -181,14 +180,14 @@ func (d *Database) removeDocumentIndex(indexName string, id string) {
   d.cache.Changed(indexName, id, false)
 }
 
-func (d *Database) addDocument(doc Document, id string, index int) {
+func (d *Database) addDocument(doc Document, id key.Type, index int) {
   bucket := d.buckets[index]
   bucket.Lock()
   defer bucket.Unlock()
   bucket.lookup[id] = doc
 }
 
-func (d *Database) removeDocument(doc Document, id string) {
+func (d *Database) removeDocument(doc Document, id key.Type) {
   index := d.getBucket(id)
   bucket := d.buckets[index]
   bucket.Lock()

@@ -4,6 +4,7 @@ package nabu
 
 import (
   "sort"
+  "nabu/key"
 )
 
 type UnsortedResult struct {
@@ -11,18 +12,18 @@ type UnsortedResult struct {
   total int
   hasMore bool
   db *Database
-  ids []string
-  original []string
-  rank map[string]int
   documents []Document
+  ids []key.Type
+  original []key.Type
+  rank map[key.Type]int
 }
 
 func newUnsortedResult(db *Database) *UnsortedResult{
   r := &UnsortedResult{
     db: db,
     found: 0,
-    original: make([]string, db.maxUnsortedSize),
-    rank: make(map[string]int, db.maxUnsortedSize),
+    original: make([]key.Type, db.maxUnsortedSize),
+    rank: make(map[key.Type]int, db.maxUnsortedSize),
   }
   min := db.maxUnsortedSize
   if db.maxLimit < min { min = db.maxLimit }
@@ -42,7 +43,7 @@ func (r *UnsortedResult) HasMore() bool {
   return r.hasMore
 }
 
-func (r *UnsortedResult) Ids() []string {
+func (r *UnsortedResult) Ids() []key.Type {
   return r.ids[0:r.found]
 }
 
@@ -53,7 +54,7 @@ func (r *UnsortedResult) Docs() []Document {
   return r.documents[0:r.found]
 }
 
-func (r *UnsortedResult) add(value string, rank int) {
+func (r *UnsortedResult) add(value key.Type, rank int) {
   r.original[r.found] = value
   r.rank[value] = rank
   r.found++

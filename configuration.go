@@ -3,10 +3,10 @@ package nabu
 type Configuration struct {
   maxLimit int
   maxTotal int
+  bucketCount int
   defaultLimit int
   cacheWorkers int
   queryPoolSize int
-  bucketCount uint32
   maxUnsortedSize int
   maxIndexesPerQuery int
   sortedResultPoolSize int
@@ -44,7 +44,7 @@ func (c *Configuration) MaxTotal(max int) *Configuration {
 }
 
 func (c *Configuration) BucketCount(bucketCount int) *Configuration {
-  c.bucketCount = uint32(bucketCount)
+  c.bucketCount = bucketCount
   return c
 }
 

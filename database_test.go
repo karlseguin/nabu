@@ -2,6 +2,7 @@ package nabu
 
 import (
   "testing"
+  "nabu/key"
   "nabu/indexes"
   "github.com/karlseguin/gspec"
 )
@@ -12,7 +13,7 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
   conf := Configure().QueryPoolSize(2).DefaultLimit(3).MaxLimit(4).
             MaxUnsortedSize(5).ResultsPoolSize(6, 7).BucketCount(8)
   db := New(conf)
-  db.LoadSort("x", []string{})
+  db.LoadSort("x", []key.Type{})
   spec.Expect(len(db.queryPool)).ToEqual(2)
   spec.Expect(len(db.sortedResults)).ToEqual(6)
   spec.Expect(len(db.unsortedResults)).ToEqual(7)
@@ -79,7 +80,7 @@ func NewDoc(id string, indexes ...string) *Doc {
 }
 
 func (d *Doc) ReadMeta(meta *Meta) {
-  meta.Id(d.id)
+  meta.Id(key.Type(d.id))
   for i := 0; i < len(d.indexes); i+=2 {
     meta.Index(d.indexes[i], d.indexes[i+1])
   }
@@ -87,7 +88,7 @@ func (d *Doc) ReadMeta(meta *Meta) {
 
 func SmallDB() *Database {
   db := New(SmallConfig())
-  db.LoadSort("created", []string{})
+  db.LoadSort("created", []key.Type{})
   addIndex(db, "age$29", indexes.New("age$29"))
   return db
 }

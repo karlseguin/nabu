@@ -2,12 +2,13 @@ package indexes
 
 import (
   "sync"
+  "nabu/key"
 )
 
 type StaticSort struct {
   length int
   sync.RWMutex
-  ids []string
+  ids []key.Type
 }
 
 func (s *StaticSort) Len() int {
@@ -20,12 +21,12 @@ func (s *StaticSort) CanRank() bool {
   return false
 }
 
-func (s *StaticSort) Load(ids []string) {
+func (s *StaticSort) Load(ids []key.Type) {
   length := len(ids)+2
-  padded := make([]string, length)
-  padded[0] = ""
+  padded := make([]key.Type, length)
+  padded[0] = key.NULL
   copy(padded[1:length-1], ids)
-  padded[length-1] = ""
+  padded[length-1] = key.NULL
 
   s.Lock()
   s.length = length - 2
@@ -33,7 +34,7 @@ func (s *StaticSort) Load(ids []string) {
   s.Unlock()
 }
 
-func (s *StaticSort) Rank(id string) (int, bool) {
+func (s *StaticSort) Rank(id key.Type) (int, bool) {
   return 0, false
 }
 
@@ -61,12 +62,12 @@ type StaticSortForwardIterator struct {
   s *StaticSort
 }
 
-func (i *StaticSortForwardIterator) Next() string {
+func (i *StaticSortForwardIterator) Next() key.Type {
   i.position++
   return i.Current()
 }
 
-func (i *StaticSortForwardIterator) Current() string {
+func (i *StaticSortForwardIterator) Current() key.Type {
   return i.s.ids[i.position]
 }
 
@@ -79,12 +80,12 @@ type StaticSortBackwardsIterator struct {
   s *StaticSort
 }
 
-func (i *StaticSortBackwardsIterator) Next() string {
+func (i *StaticSortBackwardsIterator) Next() key.Type {
   i.position--
   return i.Current()
 }
 
-func (i *StaticSortBackwardsIterator) Current() string {
+func (i *StaticSortBackwardsIterator) Current() key.Type {
   return i.s.ids[i.position]
 }
 

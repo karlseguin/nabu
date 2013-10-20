@@ -2,34 +2,35 @@ package indexes
 
 import (
   "sync"
+  "nabu/key"
 )
 
 type Index struct {
   sync.RWMutex
   Name string
-  Ids map[string]struct{}
+  Ids map[key.Type]struct{}
 }
 
 func New(name string) *Index {
   return &Index{
     Name: name,
-    Ids: make(map[string]struct{}),
+    Ids: make(map[key.Type]struct{}),
   }
 }
 
-func (i *Index) Add(id string) {
+func (i *Index) Add(id key.Type) {
   i.Lock()
   defer i.Unlock()
   i.Ids[id] = struct{}{}
 }
 
-func (i *Index) Remove(id string) {
+func (i *Index) Remove(id key.Type) {
   i.Lock()
   defer i.Unlock()
   delete(i.Ids, id)
 }
 
-func (i *Index) Contains(id string) bool {
+func (i *Index) Contains(id key.Type) bool {
   i.RLock()
   defer i.RUnlock()
   _, exists := i.Ids[id]

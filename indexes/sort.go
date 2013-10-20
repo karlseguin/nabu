@@ -1,21 +1,21 @@
 package indexes
 
 import (
-  // "strconv"
+  "nabu/key"
 )
 
 type Sort interface {
   Len() int
   CanRank() bool
-  Load(ids []string)
-  Rank(id string) (int, bool)
+  Load(ids []key.Type)
+  Rank(id key.Type) (int, bool)
   Forwards(offset int) Iterator
   Backwards(offset int) Iterator
 }
 
 type Iterator interface {
-  Next() string
-  Current() string
+  Next() key.Type
+  Current() key.Type
   Close()
 }
 
@@ -25,8 +25,8 @@ func NewSort() Sort {
 
 type EmptyIterator struct {}
 
-func (i *EmptyIterator) Next() string { return "" }
-func (i *EmptyIterator) Current() string { return "" }
+func (i *EmptyIterator) Next() key.Type { return key.NULL }
+func (i *EmptyIterator) Current() key.Type { return key.NULL }
 func (i *EmptyIterator) Close() {}
 
 var emptyIterator = &EmptyIterator{}

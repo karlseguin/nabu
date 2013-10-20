@@ -5,6 +5,7 @@ import (
   "sync"
   "time"
   "strings"
+  "nabu/key"
   "nabu/indexes"
   "container/list"
 )
@@ -40,7 +41,7 @@ func New(fetcher IndexFetcher, workerCount int) *Cache {
   return c
 }
 
-func (c *Cache) Changed(indexName string, id string, added bool) {
+func (c *Cache) Changed(indexName string, id key.Type, added bool) {
   c.changeQueue <- &Change{
     id: id,
     indexName: indexName,

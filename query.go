@@ -2,6 +2,7 @@ package nabu
 
 import (
   "sort"
+  "nabu/key"
   "nabu/indexes"
 )
 
@@ -81,6 +82,7 @@ func (q *Query) Execute() Result {
   }
   if indexCount > 1 && q.cache == true {
     if cached, ok := q.db.cache.Get(q.indexNames[0:indexCount]); ok {
+      q.indexCount = 1
       cached.RLock()
       defer cached.RUnlock()
       return q.execute(cached)
@@ -127,7 +129,7 @@ func (q *Query) findWithNoIndexes() Result {
     iterator = q.sort.Forwards(q.offset)
   }
 
-  for id := iterator.Current(); id != ""; id = iterator.Next() {
+  for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
     if result.add(id) == limit { break }
   }
   iterator.Close()
@@ -173,7 +175,7 @@ func (q *Query) findBySort(idx indexes.Indexes) Result {
     iterator = q.sort.Forwards(0)
   }
 
-  for id := iterator.Current(); id != ""; id = iterator.Next() {
+  for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
     for j := 0; j < indexCount; j++ {
       if _, exists := idx[j].Ids[id]; exists == false {
         goto nomatchdesc

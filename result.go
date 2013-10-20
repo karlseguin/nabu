@@ -1,18 +1,22 @@
 package nabu
 
+import (
+  "nabu/key"
+)
+
 type Result interface {
   Len() int
   Total() int
   HasMore() bool
-  Ids() []string
   Docs() []Document
+  Ids() []key.Type
   Close()
 }
 
 var EmptyResult = &emptyResult{}
 
 type emptyResult struct {
-  ids []string
+  ids []key.Type
   documents []Document
 }
 
@@ -28,7 +32,7 @@ func (r *emptyResult) HasMore() bool {
   return false
 }
 
-func (r *emptyResult) Ids() []string {
+func (r *emptyResult) Ids() []key.Type {
   return r.ids
 }
 

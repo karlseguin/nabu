@@ -1,11 +1,15 @@
 package nabu
 
+import (
+  "nabu/key"
+)
+
 type Document interface {
   ReadMeta(meta *Meta)
 }
 
 type Meta struct {
-  id string
+  id key.Type
   indexes map[string]struct{}
 }
 
@@ -15,7 +19,7 @@ func newMeta() *Meta {
   }
 }
 
-func (m *Meta) Id(id string) *Meta {
+func (m *Meta) Id(id key.Type) *Meta {
   m.id = id
   return m
 }
