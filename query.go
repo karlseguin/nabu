@@ -89,7 +89,11 @@ func (q *Query) Execute() Result {
 
   if q.cache == true {
     cached, ok := q.db.cache.Get(q.indexNames[0:indexCount])
-    if ok { return q.execute(cached) }
+    if ok {
+      cached.RLock()
+      defer cached.RUnlock()
+      return q.execute(cached)
+    }
   }
 
   indexes := q.loadIndexes()
