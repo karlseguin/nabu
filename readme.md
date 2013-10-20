@@ -25,7 +25,6 @@ Nabu is in early development. These are the core missing features:
 * Management of sorted indexes (probably requiring a real implementation of a sortable index)
 * Persistence
 * Richer querying (ORs, maybe)
-* Cache expiry
 
 ## Usage
 This is still being flushed out.

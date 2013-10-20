@@ -7,13 +7,14 @@ import (
 
 type StaticSort struct {
   length int
-  sync.RWMutex
   ids []key.Type
+  paddedLength int
+  lock sync.RWMutex
 }
 
 func (s *StaticSort) Len() int {
-  s.RLock()
-  defer s.RUnlock()
+  s.lock.RLock()
+  defer s.lock.RUnlock()
   return s.length
 }
 
@@ -28,10 +29,11 @@ func (s *StaticSort) Load(ids []key.Type) {
   copy(padded[1:length-1], ids)
   padded[length-1] = key.NULL
 
-  s.Lock()
+  s.lock.Lock()
+  s.paddedLength = length
   s.length = length - 2
   s.ids = padded
-  s.Unlock()
+  s.lock.Unlock()
 }
 
 func (s *StaticSort) Rank(id key.Type) (int, bool) {
@@ -40,26 +42,29 @@ func (s *StaticSort) Rank(id key.Type) (int, bool) {
 
 func (s *StaticSort) Forwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
-  s.RLock()
+  s.lock.RLock()
   return &StaticSortForwardIterator{
-    s: s,
+    lock: &s.lock,
     position: offset+1,
+    ids: s.ids[0:s.paddedLength],
   }
 }
 
 func (s *StaticSort) Backwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
 
-  s.RLock()
+  s.lock.RLock()
   return &StaticSortBackwardsIterator{
-    s: s,
-    position: s.Len() - offset,
+    lock: &s.lock,
+    ids: s.ids[0:s.paddedLength],
+    position: s.length - offset,
   }
 }
 
 type StaticSortForwardIterator struct {
   position int
-  s *StaticSort
+  ids []key.Type
+  lock *sync.RWMutex
 }
 
 func (i *StaticSortForwardIterator) Next() key.Type {
@@ -68,16 +73,17 @@ func (i *StaticSortForwardIterator) Next() key.Type {
 }
 
 func (i *StaticSortForwardIterator) Current() key.Type {
-  return i.s.ids[i.position]
+  return i.ids[i.position]
 }
 
 func (i *StaticSortForwardIterator) Close() {
-  i.s.RUnlock()
+  i.lock.RUnlock()
 }
 
 type StaticSortBackwardsIterator struct {
   position int
-  s *StaticSort
+  ids []key.Type
+  lock *sync.RWMutex
 }
 
 func (i *StaticSortBackwardsIterator) Next() key.Type {
@@ -86,9 +92,9 @@ func (i *StaticSortBackwardsIterator) Next() key.Type {
 }
 
 func (i *StaticSortBackwardsIterator) Current() key.Type {
-  return i.s.ids[i.position]
+  return i.ids[i.position]
 }
 
 func (i *StaticSortBackwardsIterator) Close() {
-  i.s.RUnlock()
+  i.lock.RUnlock()
 }

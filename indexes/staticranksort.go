@@ -7,14 +7,15 @@ import (
 
 type StaticRankSort struct {
   length int
-  sync.RWMutex
   ids []key.Type
+  paddedLength int
+  lock sync.RWMutex
   lookup map[key.Type]int
 }
 
 func (s *StaticRankSort) Len() int {
-  s.RLock()
-  defer s.RUnlock()
+  s.lock.RLock()
+  defer s.lock.RUnlock()
   return s.length
 }
 
@@ -33,71 +34,38 @@ func (s *StaticRankSort) Load(ids []key.Type) {
   }
   padded[length-1] = key.NULL
 
-  s.Lock()
+  s.lock.Lock()
+  s.paddedLength = length
   s.length = length - 2
   s.ids = padded
   s.lookup = lookup
-  s.Unlock()
+  s.lock.Unlock()
 }
 
 func (s *StaticRankSort) Rank(id key.Type) (int, bool) {
-  s.RLock()
-  defer s.RUnlock()
+  s.lock.RLock()
+  defer s.lock.RUnlock()
   rank, exists := s.lookup[id]
   return rank, exists
 }
 
 func (s *StaticRankSort) Forwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
-  s.RLock()
-  return &StaticRankSortForwardIterator{
-    s: s,
+  s.lock.RLock()
+  return &StaticSortForwardIterator{
+    lock: &s.lock,
     position: offset+1,
+    ids: s.ids[0:s.paddedLength],
   }
 }
 
 func (s *StaticRankSort) Backwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
 
-  s.RLock()
-  return &StaticRankSortBackwardsIterator{
-    s: s,
-    position: s.Len() - offset,
+  s.lock.RLock()
+  return &StaticSortBackwardsIterator{
+    lock: &s.lock,
+    ids: s.ids[0:s.paddedLength],
+    position: s.length - offset,
   }
-}
-
-type StaticRankSortForwardIterator struct {
-  position int
-  s *StaticRankSort
-}
-
-func (i *StaticRankSortForwardIterator) Next() key.Type {
-  i.position++
-  return i.Current()
-}
-
-func (i *StaticRankSortForwardIterator) Current() key.Type {
-  return i.s.ids[i.position]
-}
-
-func (i *StaticRankSortForwardIterator) Close() {
-  i.s.RUnlock()
-}
-
-type StaticRankSortBackwardsIterator struct {
-  position int
-  s *StaticRankSort
-}
-
-func (i *StaticRankSortBackwardsIterator) Next() key.Type {
-  i.position--
-  return i.Current()
-}
-
-func (i *StaticRankSortBackwardsIterator) Current() key.Type {
-  return i.s.ids[i.position]
-}
-
-func (i *StaticRankSortBackwardsIterator) Close() {
-  i.s.RUnlock()
 }
