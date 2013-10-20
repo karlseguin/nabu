@@ -4,6 +4,7 @@ import (
   "sort"
   "testing"
   "strconv"
+  "nabu/key"
   "github.com/karlseguin/gspec"
 )
 
@@ -35,11 +36,11 @@ func TestIndexCanRemoveAnItem(t *testing.T) {
 func TestIndexesAreSortedFromSmallestToLargest(t *testing.T) {
   spec := gspec.New(t)
   index1 := New("_")
-  for i := 0; i < 4; i++ { index1.Add(strconv.Itoa(i)) }
+  for i := 0; i < 4; i++ { index1.Add(key.Type(strconv.Itoa(i))) }
   index2 := New("_")
-  for i := 0; i < 7; i++ { index2.Add(strconv.Itoa(i)) }
+  for i := 0; i < 7; i++ { index2.Add(key.Type(strconv.Itoa(i))) }
   index3 := New("_")
-  for i := 0; i < 13; i++ { index3.Add(strconv.Itoa(i)) }
+  for i := 0; i < 13; i++ { index3.Add(key.Type(strconv.Itoa(i))) }
 
   indexes := Indexes{index2, index1, index3}
   sort.Sort(indexes)

@@ -8,7 +8,6 @@ package key
 // }
 
 // String Keys
-
 import (
   "hash/fnv"
 )
