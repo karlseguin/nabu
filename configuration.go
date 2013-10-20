@@ -21,7 +21,7 @@ func Configure() *Configuration {
     cacheWorkers: 2,
     defaultLimit: 10,
     queryPoolSize: 512,
-    maxUnsortedSize: 5000,
+    maxUnsortedSize: 2500,
     maxIndexesPerQuery: 10,
     sortedResultPoolSize: 512,
     unsortedResultPoolSize: 512,

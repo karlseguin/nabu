@@ -71,7 +71,7 @@ func (db *Database) LoadSort(name string, ids []key.Type) {
   db.sortLock.Lock()
   s, exists = db.sorts[name]
   if exists == false {
-    s = indexes.NewSort()
+    s = indexes.NewSort(len(ids), db.maxUnsortedSize)
     db.sorts[name] = s
   }
   db.sortLock.Unlock()

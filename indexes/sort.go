@@ -19,7 +19,10 @@ type Iterator interface {
   Close()
 }
 
-func NewSort() Sort {
+func NewSort(length, maxUnsortedSize int) Sort {
+  if length < maxUnsortedSize {
+    return &StaticSort{}
+  }
   return &StaticRankSort{}
 }
 
