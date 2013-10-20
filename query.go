@@ -79,15 +79,7 @@ func (q *Query) Execute() Result {
   if indexCount == 0 {
     return q.findWithNoIndexes()
   }
-  if indexCount == 1 {
-    indexes := q.loadIndexes()
-    if indexes == nil { return EmptyResult }
-    indexes.RLock()
-    defer indexes.RUnlock()
-    return q.execute(indexes)
-  }
-
-  if q.cache == true {
+  if indexCount > 1 && q.cache == true {
     if cached, ok := q.db.cache.Get(q.indexNames[0:indexCount]); ok {
       cached.RLock()
       defer cached.RUnlock()
@@ -99,7 +91,6 @@ func (q *Query) Execute() Result {
   if indexes == nil { return EmptyResult }
   indexes.RLock()
   defer indexes.RUnlock()
-  sort.Sort(indexes)
   return q.execute(indexes)
 }
 
@@ -107,7 +98,11 @@ func (q *Query) loadIndexes() indexes.Indexes {
   if q.db.LookupIndexes(q.indexNames[0:q.indexCount], q.indexes) == false {
     return nil
   }
-  return q.indexes[0:q.indexCount]
+  indexes := q.indexes[0:q.indexCount]
+  if q.indexCount > 1 {
+    sort.Sort(indexes)
+  }
+  return indexes
 }
 
 func (q *Query) execute(indexes indexes.Indexes) Result {

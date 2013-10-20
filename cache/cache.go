@@ -81,8 +81,8 @@ func (c *Cache) workers() {
   for {
     select {
     case item := <- c.newQueue:
-      c.reverseIndex(item)
       item.build()
+      c.reverseIndex(item)
     case change := <- c.changeQueue:
       c.applyChange(change)
     }

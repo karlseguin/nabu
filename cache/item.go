@@ -28,24 +28,24 @@ func newItem(fetcher IndexFetcher, key string, indexNames []string) *Item {
   }
 }
 
-func (ci *Item) touchIfReady() bool {
-  ci.Lock()
-  defer ci.Unlock()
-  if ci.accessed.IsZero() {
+func (item *Item) touchIfReady() bool {
+  item.Lock()
+  defer item.Unlock()
+  if item.accessed.IsZero() {
     return false
   }
-  ci.accessed = time.Now()
+  item.accessed = time.Now()
   return true
 }
 
-func (ci *Item) build() {
-  ci.sources.RLock()
-  defer ci.sources.RUnlock()
-  sort.Sort(ci.sources)
-  idx := ci.sources
+func (item *Item) build() {
+  item.sources.RLock()
+  defer item.sources.RUnlock()
+  sort.Sort(item.sources)
+  idx := item.sources
   first := idx[0]
-  cached := indexes.New(ci.key)
-  indexCount := len(ci.sources)
+  cached := indexes.New(item.key)
+  indexCount := len(item.sources)
 
   for id, _ := range first.Ids {
     for j := 1; j < indexCount; j++ {
@@ -56,23 +56,23 @@ func (ci *Item) build() {
     cached.Ids[id] = struct{}{}
     nomatch:
   }
-  ci.index[0] = cached
-  ci.Lock()
-  ci.accessed = time.Now()
-  ci.Unlock()
+  item.index[0] = cached
+  item.Lock()
+  item.accessed = time.Now()
+  item.Unlock()
 }
 
-func (ci *Item) change(change *Change) {
+func (item *Item) change(change *Change) {
   if change.added {
-    ci.added(change)
+    item.added(change)
   } else {
-    ci.removed(change)
+    item.removed(change)
   }
 }
 
-func (ci *Item) added(change *Change) {
+func (item *Item) added(change *Change) {
   id := change.id
-  indexes := ci.sources
+  indexes := item.sources
   indexes.RLock()
   defer indexes.RUnlock()
   indexCount := len(indexes)
@@ -81,9 +81,9 @@ func (ci *Item) added(change *Change) {
       return
     }
   }
-  ci.index[0].Add(id)
+  item.index[0].Add(id)
 }
 
-func (ci *Item) removed(change *Change) {
-  ci.index[0].Remove(change.id)
+func (item *Item) removed(change *Change) {
+  item.index[0].Remove(change.id)
 }
