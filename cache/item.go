@@ -5,15 +5,16 @@ import (
   "sync"
   "time"
   "nabu/indexes"
+  "container/list"
 )
 
 type Item struct {
   key string
   sync.RWMutex
+  promoted time.Time
+  element *list.Element
   index indexes.Indexes
-  version uint64
   sources indexes.Indexes
-  accessed time.Time
 }
 
 func newItem(fetcher IndexFetcher, key string, indexNames []string) *Item {
@@ -28,14 +29,22 @@ func newItem(fetcher IndexFetcher, key string, indexNames []string) *Item {
   }
 }
 
-func (item *Item) touchIfReady() bool {
-  item.Lock()
-  defer item.Unlock()
-  if item.accessed.IsZero() {
-    return false
+func (item *Item) readyAndPromotable() (bool, bool) {
+  item.RLock()
+  promoted := item.promoted
+  item.RUnlock()
+  if promoted.IsZero() { return false, false }
+
+  now := time.Now()
+  stale := now.Add(-time.Minute)
+  if promoted.After(stale) {
+    return true, false
   }
-  item.accessed = time.Now()
-  return true
+  item.Lock()
+  item.promoted = now
+  item.Unlock()
+
+  return true, true
 }
 
 func (item *Item) build() {
@@ -58,7 +67,7 @@ func (item *Item) build() {
   }
   item.index[0] = cached
   item.Lock()
-  item.accessed = time.Now()
+  item.promoted = time.Now().Add(time.Minute * -60)
   item.Unlock()
 }
 

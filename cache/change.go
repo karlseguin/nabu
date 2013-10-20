@@ -36,3 +36,9 @@ func (cb *ChangeBucket) process(change *Change) {
     item.change(change)
   }
 }
+
+func (cb *ChangeBucket) remove(item *Item) {
+  cb.Lock()
+  defer cb.Unlock()
+  delete(cb.items, item.key)
+}

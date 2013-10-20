@@ -1,6 +1,7 @@
 package cache
 
 import (
+  "time"
   "testing"
   "github.com/karlseguin/gspec"
 )
@@ -8,9 +9,7 @@ import (
 func TestBuildsTheCachedItem(t *testing.T) {
   spec := gspec.New(t)
   item := newItem(newFetcher(), "testItem", []string{"a", "b"})
-  spec.Expect(item.accessed.IsZero()).ToEqual(true)
   item.build()
-  spec.Expect(item.accessed.IsZero()).ToEqual(false)
   spec.Expect(len(item.index[0].Ids)).ToEqual(2)
   spec.Expect(item.index[0].Contains("b")).ToEqual(true)
   spec.Expect(item.index[0].Contains("d")).ToEqual(true)
@@ -19,11 +18,9 @@ func TestBuildsTheCachedItem(t *testing.T) {
 func TestANewItemIsNotReadyUntilBuilt(t *testing.T) {
   spec := gspec.New(t)
   item := newItem(newFetcher(), "testItem", []string{"a", "b"})
-  spec.Expect(item.touchIfReady()).ToEqual(false)
-  spec.Expect(item.accessed.IsZero()).ToEqual(true)
+  spec.Expect(item.readyAndPromotable()).ToEqual(false)
   item.build()
-  spec.Expect(item.touchIfReady()).ToEqual(true)
-  spec.Expect(item.accessed.IsZero()).ToEqual(false)
+  spec.Expect(item.readyAndPromotable()).ToEqual(true)
 }
 
 func TestAddedItemWhichIsNotAMatch(t *testing.T) {
@@ -57,4 +54,25 @@ func TestRemoveItemWhichExists(t *testing.T) {
   item.build()
   item.change(&Change{id: "b", added: false, indexName: "B"})
   spec.Expect(len(item.index[0].Ids)).ToEqual(1)
+}
+
+func TestRecentlyPromotedItemShouldNotBePromoted(t *testing.T) {
+  spec := gspec.New(t)
+  item := newItem(newFetcher(), "testItem", []string{"a", "b"})
+  promoted := time.Now().Add(time.Second * -58)
+  item.promoted = promoted
+  _, promotable := item.readyAndPromotable()
+  spec.Expect(promotable).ToEqual(false)
+  spec.Expect(item.promoted).ToEqual(promoted)
+}
+
+func TestStaleItemShouldBePromoted(t *testing.T) {
+  spec := gspec.New(t)
+  item := newItem(newFetcher(), "testItem", []string{"a", "b"})
+  promoted := time.Now().Add(time.Second * -62)
+  item.promoted = promoted
+  now := time.Now()
+  _, promotable := item.readyAndPromotable()
+  spec.Expect(promotable).ToEqual(true)
+  spec.Expect(item.promoted.After(now)).ToEqual(true)
 }

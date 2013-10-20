@@ -1,6 +1,7 @@
 package cache
 
 import (
+  "time"
   "testing"
   "nabu/indexes"
   "github.com/karlseguin/gspec"
@@ -29,7 +30,7 @@ func TestCacheReturnsACachedItem(t *testing.T) {
   cache := New(newFetcher(), 0)
   cache.Get([]string{"a", "b"})
   item := <- cache.newQueue
-  item.build()
+  item.promoted = time.Now()
   index, exists := cache.Get([]string{"a", "b"})
   spec.Expect(exists).ToEqual(true)
   spec.Expect(len(index)).ToEqual(1)
