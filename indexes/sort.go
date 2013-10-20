@@ -20,7 +20,7 @@ type Iterator interface {
 }
 
 func NewSort() Sort {
-  return &StaticSort{}
+  return &StaticRankSort{}
 }
 
 type EmptyIterator struct {}
