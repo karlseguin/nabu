@@ -76,3 +76,63 @@ func TestSkiplistRankingIfMemberExist(t *testing.T) {
   spec.Expect(exists).ToEqual(true)
   spec.Expect(rank).ToEqual(2)
 }
+
+func TestSkipListAppendOnEmpty(t *testing.T) {
+  spec := gspec.New(t)
+  s := newSkiplist()
+  s.Append("x")
+  assertIterator(t, s.Forwards(0), "x")
+  spec.Expect(s.Rank("x")).ToEqual(1)
+}
+
+func TestSkipListPrependOnEmpty(t *testing.T) {
+  spec := gspec.New(t)
+  s := newSkiplist()
+  s.Prepend("x")
+  assertIterator(t, s.Forwards(0), "x")
+  spec.Expect(s.Rank("x")).ToEqual(-1)
+}
+
+func TestSkipListAppendToList(t *testing.T) {
+  spec := gspec.New(t)
+  s := newSkiplist()
+  s.Load([]key.Type{"a", "b"})
+  s.Set("c", 33)
+  s.Append("x")
+  assertIterator(t, s.Forwards(0), "a", "b", "c", "x")
+  spec.Expect(s.Rank("x")).ToEqual(34)
+}
+
+func TestSkipListPrependToList(t *testing.T) {
+  spec := gspec.New(t)
+  s := newSkiplist()
+  s.Load([]key.Type{"a", "b"})
+  s.Set("c", -333)
+  s.Prepend("x")
+  assertIterator(t, s.Forwards(0), "x", "c", "a", "b")
+  spec.Expect(s.Rank("x")).ToEqual(-334)
+}
+
+//todo expand this
+func TestSkipListSetAndRemoveItems(t *testing.T) {
+  s := newSkiplist()
+  s.Set("a", 1)
+  s.Set("b", 2)
+  s.Set("c", 3)
+  assertIterator(t, s.Forwards(0), "a", "b", "c")
+
+  s.Delete("d")
+  assertIterator(t, s.Forwards(0), "a", "b", "c")
+
+  s.Delete("b")
+  assertIterator(t, s.Forwards(0), "a", "c")
+
+  s.Delete("c")
+  assertIterator(t, s.Forwards(0), "a")
+
+  s.Set("b", 0)
+  assertIterator(t, s.Forwards(0), "b", "a")
+
+  s.Delete("a")
+  assertIterator(t, s.Forwards(0), "b")
+}

@@ -40,6 +40,30 @@ func (s *StaticSort) Rank(id key.Type) (int, bool) {
   return 0, false
 }
 
+func (s *StaticSort) Append(id key.Type) {
+  s.lock.Lock()
+  defer s.lock.Unlock()
+  l := s.paddedLength
+  s.modify(id, 0, l, l-1)
+}
+
+func (s *StaticSort) Prepend(id key.Type) {
+  s.lock.Lock()
+  defer s.lock.Unlock()
+  s.modify(id, 1, 0, 1)
+}
+
+func (s *StaticSort) modify(id key.Type, offset, newNull, newIndex int) {
+  l := s.paddedLength
+  padded := make([]key.Type, l+1)
+  copy(padded[offset:], s.ids)
+  padded[newNull] = key.NULL
+  padded[newIndex] = id
+  s.paddedLength++
+  s.length++
+  s.ids = padded
+}
+
 func (s *StaticSort) Forwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
   s.lock.RLock()

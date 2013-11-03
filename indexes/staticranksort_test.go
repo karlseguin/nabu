@@ -78,3 +78,23 @@ func TestStaticRankSortRankingIfMemberExist(t *testing.T) {
   spec.Expect(exists).ToEqual(true)
   spec.Expect(rank).ToEqual(2)
 }
+
+func TestStaticRankSortCanAppendAValue(t *testing.T) {
+  spec := gspec.New(t)
+  s := &StaticRankSort{}
+  s.Load([]key.Type{"a", "b", "c"})
+  s.Append("d")
+  assertIterator(t, s.Forwards(0), "a", "b", "c", "d")
+  spec.Expect(s.Len()).ToEqual(4)
+  spec.Expect(s.Rank("d")).ToEqual(3)
+}
+
+func TestStaticRankSortCanPrependAValue(t *testing.T) {
+  spec := gspec.New(t)
+  s := &StaticRankSort{}
+  s.Load([]key.Type{"a", "b", "c"})
+  s.Prepend("z")
+  assertIterator(t, s.Forwards(0), "z", "a", "b", "c")
+  spec.Expect(s.Len()).ToEqual(4)
+  spec.Expect(s.Rank("z")).ToEqual(-1)
+}

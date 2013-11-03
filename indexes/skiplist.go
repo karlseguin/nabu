@@ -46,6 +46,7 @@ func newSkiplist() *Skiplist {
   }
   tail := &SkiplistNode {
     id: key.NULL,
+    prev: head,
   }
 
   return &Skiplist {
@@ -91,6 +92,23 @@ func (s *Skiplist) Delete(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
   s.delete(id)
+}
+
+func (s *Skiplist) Append(id key.Type) {
+  s.lock.RLock()
+  highRank := s.tail.prev.rank
+  s.lock.RUnlock()
+  s.Set(id, highRank + 1)
+}
+
+func (s *Skiplist) Prepend(id key.Type) {
+  s.lock.RLock()
+  var lowRank int
+  if s.head.next[0] != nil {
+    lowRank = s.head.next[0].rank
+  }
+  s.lock.RUnlock()
+  s.Set(id, lowRank - 1)
 }
 
 func (s *Skiplist) delete(id key.Type) {

@@ -11,6 +11,13 @@ type Sort interface {
   Rank(id key.Type) (int, bool)
   Forwards(offset int) Iterator
   Backwards(offset int) Iterator
+  // Append(id key.Type)
+  // Prepend(id key.Type)
+}
+
+type DynamicSort interface {
+  Set(id key.Type, rank int)
+  Delete(id key.Type)
 }
 
 type Iterator interface {
