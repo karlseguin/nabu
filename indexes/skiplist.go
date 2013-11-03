@@ -60,7 +60,7 @@ func newSkiplist() *Skiplist {
 func (s *Skiplist) Set(id key.Type, rank int) {
   s.lock.Lock()
   defer s.lock.Unlock()
-  s.delete(id)
+  s.remove(id)
 
   level := s.getLevel()
   node := &SkiplistNode {
@@ -88,10 +88,10 @@ func (s *Skiplist) Set(id key.Type, rank int) {
   s.lookup[id] = rank
 }
 
-func (s *Skiplist) Delete(id key.Type) {
+func (s *Skiplist) Remove(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
-  s.delete(id)
+  s.remove(id)
 }
 
 func (s *Skiplist) Append(id key.Type) {
@@ -111,7 +111,7 @@ func (s *Skiplist) Prepend(id key.Type) {
   s.Set(id, lowRank - 1)
 }
 
-func (s *Skiplist) delete(id key.Type) {
+func (s *Skiplist) remove(id key.Type) {
   rank, exists := s.lookup[id]
   if exists == false { return }
 

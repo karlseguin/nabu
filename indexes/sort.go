@@ -11,13 +11,13 @@ type Sort interface {
   Rank(id key.Type) (int, bool)
   Forwards(offset int) Iterator
   Backwards(offset int) Iterator
-  // Append(id key.Type)
-  // Prepend(id key.Type)
+  Append(id key.Type)
+  Prepend(id key.Type)
 }
 
 type DynamicSort interface {
   Set(id key.Type, rank int)
-  Delete(id key.Type)
+  Remove(id key.Type)
 }
 
 type Iterator interface {
@@ -26,7 +26,11 @@ type Iterator interface {
   Close()
 }
 
-func NewSort(length, maxUnsortedSize int) Sort {
+func NewSort(length, maxUnsortedSize int, dynamic bool) Sort {
+  if dynamic {
+    return newSkiplist()
+  }
+
   if length < maxUnsortedSize {
     return &StaticSort{}
   }

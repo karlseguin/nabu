@@ -121,18 +121,18 @@ func TestSkipListSetAndRemoveItems(t *testing.T) {
   s.Set("c", 3)
   assertIterator(t, s.Forwards(0), "a", "b", "c")
 
-  s.Delete("d")
+  s.Remove("d")
   assertIterator(t, s.Forwards(0), "a", "b", "c")
 
-  s.Delete("b")
+  s.Remove("b")
   assertIterator(t, s.Forwards(0), "a", "c")
 
-  s.Delete("c")
+  s.Remove("c")
   assertIterator(t, s.Forwards(0), "a")
 
   s.Set("b", 0)
   assertIterator(t, s.Forwards(0), "b", "a")
 
-  s.Delete("a")
+  s.Remove("a")
   assertIterator(t, s.Forwards(0), "b")
 }

@@ -3,7 +3,6 @@ package nabu
 import (
   "fmt"
   "sync"
-  // "hash/fnv"
   "nabu/key"
   "nabu/cache"
   "nabu/indexes"
@@ -48,34 +47,43 @@ func New(c *Configuration) *Database {
   return db
 }
 
-func (db *Database) Query(name string) *Query {
-  sort, exists := db.sorts[name]
+func (d *Database) Query(name string) *Query {
+  d.sortLock.RLock()
+  sort, exists := d.sorts[name]
+  d.sortLock.RUnlock()
   if exists == false {
     panic(fmt.Sprintf("unknown sort index %q", name))
   }
-  q := <-db.queryPool
+  q := <-d.queryPool
   q.sort = sort
-  q.sortLength = sort.Len()
   return q
 }
 
-func (db *Database) LoadSort(name string, ids []key.Type) {
-  db.sortLock.RLock()
-  s, exists := db.sorts[name]
-  db.sortLock.RUnlock()
+func (d *Database) LoadSort(name string, ids []key.Type) {
+  d.sortLock.RLock()
+  s, exists := d.sorts[name]
+  d.sortLock.RUnlock()
   if exists {
     s.Load(ids)
     return
   }
 
-  db.sortLock.Lock()
-  s, exists = db.sorts[name]
+  d.sortLock.Lock()
+  s, exists = d.sorts[name]
   if exists == false {
-    s = indexes.NewSort(len(ids), db.maxUnsortedSize)
-    db.sorts[name] = s
+    s = indexes.NewSort(len(ids), d.maxUnsortedSize, false)
+    d.sorts[name] = s
   }
-  db.sortLock.Unlock()
+  d.sortLock.Unlock()
   s.Load(ids)
+}
+
+func (d *Database) AppendSort(sortName string, id key.Type) {
+  d.getOrCreateSort(sortName).Append(id)
+}
+
+func (d *Database) PrependSort(sortName string, id key.Type) {
+  d.getOrCreateSort(sortName).Prepend(id)
 }
 
 func (d *Database) Get(id key.Type) Document {
@@ -91,6 +99,9 @@ func (d *Database) Update(doc Document) {
   } else {
     d.replace(doc, meta, old, bucket)
   }
+  for sort, rank := range meta.sorts {
+    d.addDocumentSort(sort, meta.id, rank)
+  }
 }
 
 func (d *Database) Remove(doc Document) {
@@ -99,6 +110,9 @@ func (d *Database) Remove(doc Document) {
   id := meta.id
   for index, _ := range meta.indexes {
     d.removeDocumentIndex(index, id)
+  }
+  for sort, _ := range meta.sorts {
+    d.removeDocumentSort(sort, id)
   }
   d.removeDocument(doc, id)
 }
@@ -171,6 +185,26 @@ func (d *Database) addDocumentIndex(indexName string, id key.Type) {
   d.cache.Changed(indexName, id, true)
 }
 
+func (d *Database) addDocumentSort(sortName string, id key.Type, rank int) {
+  d.getOrCreateSort(sortName).(indexes.DynamicSort).Set(id, rank)
+}
+
+func (d *Database) getOrCreateSort(sortName string) indexes.Sort {
+  d.sortLock.RLock()
+  sort, exists := d.sorts[sortName]
+  d.sortLock.RUnlock()
+  if exists { return sort }
+
+  d.sortLock.Lock()
+  defer d.sortLock.Unlock()
+  sort, exists = d.sorts[sortName]
+  if exists == false {
+    sort = indexes.NewSort(0, 0, true)
+    d.sorts[sortName] = sort
+  }
+  return sort
+}
+
 func (d *Database) removeDocumentIndex(indexName string, id key.Type) {
   d.indexLock.RLock()
   index, exists := d.indexes[indexName]
@@ -178,6 +212,14 @@ func (d *Database) removeDocumentIndex(indexName string, id key.Type) {
   if exists == false { return }
   index.Remove(id)
   d.cache.Changed(indexName, id, false)
+}
+
+func (d *Database) removeDocumentSort(sortName string, id key.Type) {
+  d.sortLock.RLock()
+  sort, exists := d.sorts[sortName]
+  d.sortLock.RUnlock()
+  if exists == false { return }
+  sort.(indexes.DynamicSort).Remove(id)
 }
 
 func (d *Database) addDocument(doc Document, id key.Type, index int) {

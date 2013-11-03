@@ -22,7 +22,6 @@ Nabu attempts to solve both these problems. By being in-process, there is no net
 ## State
 Nabu is in early development. These are the core missing features:
 
-* Management of sorted indexes (probably requiring a real implementation of a sortable index)
 * Persistence
 * Richer querying (ORs, maybe)
 
@@ -43,6 +42,7 @@ Nabu deals with objects fulfilling the `nabu.Document` interface through an inst
       m.Index("user:age", strconv.Itoa(u.Age))
       m.Index("user:startswith", string.ToLower(u.Name[0:1]))
       m.Index("user:gender", u.Gender)
+      m.Sort("created", time.Now().Unix())
     }
 
 It's important to note that `ReadMeta` is only called on startup or when a document is added to the database. Do not waste memory storing meta information about indexes.
@@ -104,3 +104,13 @@ Available options are:
 * `ResultsPoolSize(sorted int, unsorted int)` The pool size for sorted results as well as unsorted results
 
 Pools are currently blocking. Hooks will eventually be provided to gauge the health and appropriateness of pool sizes.
+
+
+### Sorts
+Two types of sorting indexes exist: static and dynamic. Dynamic sorts are updated as documented are added and removed. This is achieved by calling `Sort` within your documents `ReadMeta` method and, for all intents and purposes, acts like any other index (except it's sorted).
+
+Static indexes are more efficient but cannot be easily changed. Instead, they are meant to be updated in batches (possibly by a scheduled background job). For example, you might run a hourly job that ranks trending documents, asynchronously from documents being added and remove.d 
+
+A static indexes is loaded (or updated) in full by calling `db.LoadSort`. The ids are provided as an array and the ranking is simply implied by the array's order. 
+
+Both static and dynamic sorting indexes expose an `Append` and `Prepend` method (exposed via the `db.AppendSort` and `db.PrependSort` methods). This is currently inneficient to call on large static indexes. However, it can be useful for a few common cases (such as having a relatively real time created at list where documents aren't added too frequently).

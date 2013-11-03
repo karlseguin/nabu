@@ -10,11 +10,13 @@ type Document interface {
 
 type Meta struct {
   id key.Type
+  sorts map[string]int
   indexes map[string]struct{}
 }
 
 func newMeta() *Meta {
   return &Meta{
+    sorts: make(map[string]int),
     indexes: make(map[string]struct{}),
   }
 }
@@ -26,5 +28,10 @@ func (m *Meta) Id(id key.Type) *Meta {
 
 func (m *Meta) Index(index, value string) *Meta {
   m.indexes[index + "$" + value] = struct{}{}
+  return m
+}
+
+func (m *Meta) Sort(name string, rank int) *Meta {
+  m.sorts[name] = rank
   return m
 }
