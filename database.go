@@ -59,31 +59,16 @@ func (d *Database) Query(name string) *Query {
   return q
 }
 
-func (d *Database) LoadSort(name string, ids []key.Type) {
-  d.sortLock.RLock()
-  s, exists := d.sorts[name]
-  d.sortLock.RUnlock()
-  if exists {
-    s.Load(ids)
-    return
-  }
-
-  d.sortLock.Lock()
-  s, exists = d.sorts[name]
-  if exists == false {
-    s = indexes.NewSort(len(ids), d.maxUnsortedSize, false)
-    d.sorts[name] = s
-  }
-  d.sortLock.Unlock()
-  s.Load(ids)
+func (d *Database) LoadSort(sortName string, ids []key.Type) {
+  d.getOrCreateSort(sortName, len(ids)).Load(ids)
 }
 
 func (d *Database) AppendSort(sortName string, id key.Type) {
-  d.getOrCreateSort(sortName).Append(id)
+  d.getOrCreateSort(sortName, -1).Append(id)
 }
 
 func (d *Database) PrependSort(sortName string, id key.Type) {
-  d.getOrCreateSort(sortName).Prepend(id)
+  d.getOrCreateSort(sortName, -1).Prepend(id)
 }
 
 func (d *Database) Get(id key.Type) Document {
@@ -186,10 +171,10 @@ func (d *Database) addDocumentIndex(indexName string, id key.Type) {
 }
 
 func (d *Database) addDocumentSort(sortName string, id key.Type, rank int) {
-  d.getOrCreateSort(sortName).(indexes.DynamicSort).Set(id, rank)
+  d.getOrCreateSort(sortName, -1).(indexes.DynamicSort).Set(id, rank)
 }
 
-func (d *Database) getOrCreateSort(sortName string) indexes.Sort {
+func (d *Database) getOrCreateSort(sortName string, length int) indexes.Sort {
   d.sortLock.RLock()
   sort, exists := d.sorts[sortName]
   d.sortLock.RUnlock()
@@ -199,7 +184,7 @@ func (d *Database) getOrCreateSort(sortName string) indexes.Sort {
   defer d.sortLock.Unlock()
   sort, exists = d.sorts[sortName]
   if exists == false {
-    sort = indexes.NewSort(0, 0, true)
+    sort = indexes.NewSort(length, d.maxUnsortedSize)
     d.sorts[sortName] = sort
   }
   return sort

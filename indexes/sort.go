@@ -26,11 +26,10 @@ type Iterator interface {
   Close()
 }
 
-func NewSort(length, maxUnsortedSize int, dynamic bool) Sort {
-  if dynamic {
+func NewSort(length, maxUnsortedSize int) Sort {
+  if length == -1 {
     return newSkiplist()
   }
-
   if length < maxUnsortedSize {
     return &StaticSort{}
   }
