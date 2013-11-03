@@ -2,7 +2,7 @@ package key
 
 // UINT keys
 // type Type uint
-// const NULL = 0
+// const NULL Type = 0
 // func (t Type) Bucket(count int) int {
 //   return int(uint(t) % uint(count))
 // }
@@ -12,7 +12,7 @@ import (
   "hash/fnv"
 )
 type Type string
-const NULL = ""
+const NULL Type = ""
 func (t Type) Bucket(count int) int {
   h := fnv.New32a()
   h.Write([]byte(t))
