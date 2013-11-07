@@ -3,6 +3,7 @@ package nabu
 type Configuration struct {
   maxLimit int
   maxTotal int
+  dbPath string
   bucketCount int
   defaultLimit int
   cacheWorkers int
@@ -20,6 +21,7 @@ func Configure() *Configuration {
     bucketCount: 25,
     cacheWorkers: 2,
     defaultLimit: 10,
+    dbPath: "./data/",
     queryPoolSize: 512,
     maxUnsortedSize: 2500,
     maxIndexesPerQuery: 10,
@@ -55,6 +57,11 @@ func (c *Configuration) QueryPoolSize(size int) *Configuration {
 
 func (c *Configuration) MaxUnsortedSize(max int) *Configuration {
   c.maxUnsortedSize = max
+  return c
+}
+
+func (c *Configuration) DbPath(path string) *Configuration {
+  c.dbPath = path
   return c
 }
 

@@ -6,6 +6,7 @@ import (
   "nabu/key"
   "nabu/cache"
   "nabu/indexes"
+  "nabu/storage"
 )
 
 type Database struct {
@@ -13,6 +14,7 @@ type Database struct {
   cache *cache.Cache
   queryPool chan *Query
   sortLock sync.RWMutex
+  storage storage.Storage
   buckets map[int]*Bucket
   indexLock sync.RWMutex
   sorts map[string]indexes.Sort
@@ -24,6 +26,7 @@ type Database struct {
 func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
+    storage: storage.New(c.dbPath),
     sorts: make(map[string]indexes.Sort),
     indexes: make(map[string]*indexes.Index),
     queryPool: make(chan *Query, c.queryPoolSize),
@@ -87,6 +90,7 @@ func (d *Database) Update(doc Document) {
   for sort, rank := range meta.sorts {
     d.addDocumentSort(sort, meta.id, rank)
   }
+  d.storage.Put(meta.id, doc)
 }
 
 func (d *Database) Remove(doc Document) {
@@ -100,6 +104,7 @@ func (d *Database) Remove(doc Document) {
     d.removeDocumentSort(sort, id)
   }
   d.removeDocument(doc, id)
+  d.storage.Remove(id)
 }
 
 func (d *Database) RemoveById(id key.Type) {
