@@ -113,6 +113,16 @@ func TestSkipListPrependToList(t *testing.T) {
   spec.Expect(s.Rank("x")).ToEqual(-334)
 }
 
+func TestSkipListReplace(t *testing.T) {
+  spec := gspec.New(t)
+  s := newSkiplist()
+  s.Set("a", 1)
+  s.Set("b", 2)
+  s.Set("a", 1)
+  assertIterator(t, s.Forwards(0), "a", "b")
+  spec.Expect(s.Rank("a")).ToEqual(1)
+}
+
 //todo expand this
 func TestSkipListSetAndRemoveItems(t *testing.T) {
   s := newSkiplist()
