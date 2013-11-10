@@ -9,7 +9,10 @@ import (
   "nabu/storage"
 )
 
+type Factory func(id key.Type, data []byte) Document
+
 type Database struct {
+  loading bool
   *Configuration
   cache *cache.Cache
   queryPool chan *Query
@@ -47,6 +50,8 @@ func New(c *Configuration) *Database {
   for i := 0; i < c.unsortedResultPoolSize; i++ {
     db.unsortedResults <- newUnsortedResult(db)
   }
+
+  db.restore()
   return db
 }
 
@@ -90,7 +95,9 @@ func (d *Database) Update(doc Document) {
   for sort, rank := range meta.sorts {
     d.addDocumentSort(sort, meta.id, rank)
   }
-  d.storage.Put(meta.id, doc)
+  if d.loading == false {
+    d.storage.Put(meta.id, doc)
+  }
 }
 
 func (d *Database) Remove(doc Document) {
@@ -104,7 +111,9 @@ func (d *Database) Remove(doc Document) {
     d.removeDocumentSort(sort, id)
   }
   d.removeDocument(doc, id)
-  d.storage.Remove(id)
+  if d.loading == false {
+    d.storage.Remove(id)
+  }
 }
 
 func (d *Database) RemoveById(id key.Type) {
@@ -113,6 +122,18 @@ func (d *Database) RemoveById(id key.Type) {
   if doc != nil {
     d.Remove(doc)
   }
+}
+
+func (d *Database) BeginLoad() {
+  d.loading = true
+}
+
+func (d *Database) EndLoad() {
+  d.loading = false
+}
+
+func (d *Database) Close() error {
+  return d.storage.Close()
 }
 
 func (d *Database) getMeta(id key.Type, bucket int) *Meta {
@@ -172,7 +193,7 @@ func (d *Database) addDocumentIndex(indexName string, id key.Type) {
     d.indexLock.Unlock()
   }
   index.Add(id)
-  d.cache.Changed(indexName, id, true)
+  d.changed(indexName, id, true)
 }
 
 func (d *Database) addDocumentSort(sortName string, id key.Type, rank int) {
@@ -201,7 +222,7 @@ func (d *Database) removeDocumentIndex(indexName string, id key.Type) {
   d.indexLock.RUnlock()
   if exists == false { return }
   index.Remove(id)
-  d.cache.Changed(indexName, id, false)
+  d.changed(indexName, id, false)
 }
 
 func (d *Database) removeDocumentSort(sortName string, id key.Type) {
@@ -225,6 +246,21 @@ func (d *Database) removeDocument(doc Document, id key.Type) {
   bucket.Lock()
   defer bucket.Unlock()
   delete(bucket.lookup, id)
+}
+
+func (d *Database) changed(indexName string, id key.Type, updated bool) {
+  if d.loading == false {
+    d.cache.Changed(indexName, id, updated)
+  }
+}
+
+func (d *Database) restore() {
+  d.BeginLoad()
+  iter := d.storage.Iterator()
+  for iter.Next() {
+    d.Update(d.factory(iter.Current()))
+  }
+  d.EndLoad()
 }
 
 func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bool {

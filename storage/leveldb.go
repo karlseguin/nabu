@@ -2,9 +2,10 @@ package storage
 
 import (
   "nabu/key"
-  "encoding/gob"
   "nabu/bytepool"
+  "encoding/json"
   "github.com/syndtr/goleveldb/leveldb"
+  "github.com/syndtr/goleveldb/leveldb/iterator"
 )
 
 var encodingPool = bytepool.New(32, 1 * 1024 * 1024)
@@ -22,17 +23,42 @@ func newLeveldb(path string) *Leveldb {
 }
 
 func (l *Leveldb) Put(id key.Type, value interface{}) {
-  buffer := encodingPool.Checkout()
-  defer buffer.Close()
-  encoder := gob.NewEncoder(buffer)
-  encoder.Encode(value)
+  encodedValue, err := json.Marshal(value)
+  if err != nil { panic(err) }
+
   idBuffer := id.Serialize()
   defer idBuffer.Close()
-  l.db.Put(idBuffer.Bytes(), buffer.Bytes(), nil)
+  l.db.Put(idBuffer.Bytes(), encodedValue, nil)
 }
 
 func (l *Leveldb) Remove(id key.Type) {
   idBuffer := id.Serialize()
   defer idBuffer.Close()
   l.db.Delete(idBuffer.Bytes(), nil)
+}
+
+func (l *Leveldb) Iterator() Iterator {
+  return &LeveldbIterator {
+    inner: l.db.NewIterator(nil),
+  }
+}
+
+func (l *Leveldb) Close() error {
+  return l.db.Close()
+}
+
+type LeveldbIterator struct {
+  inner iterator.Iterator
+}
+
+func (i *LeveldbIterator) Next() bool {
+  return i.inner.Next()
+}
+
+func (i *LeveldbIterator) Current() (key.Type, []byte) {
+  return key.Deserialize(i.inner.Key()), i.inner.Value()
+}
+
+func (i *LeveldbIterator) Close() {
+  i.inner.Release()
 }

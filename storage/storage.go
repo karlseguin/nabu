@@ -5,8 +5,16 @@ import (
 )
 
 type Storage interface {
-  Put(id key.Type, value interface{})
+  Close() error
   Remove(id key.Type)
+  Put(id key.Type, value interface{})
+  Iterator() Iterator
+}
+
+type Iterator interface {
+  Close()
+  Next() bool
+  Current() (key.Type, []byte)
 }
 
 func New(path string) Storage {

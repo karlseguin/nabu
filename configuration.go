@@ -4,6 +4,7 @@ type Configuration struct {
   maxLimit int
   maxTotal int
   dbPath string
+  factory Factory
   bucketCount int
   defaultLimit int
   cacheWorkers int
@@ -14,13 +15,14 @@ type Configuration struct {
   unsortedResultPoolSize int
 }
 
-func Configure() *Configuration {
+func Configure(factory Factory) *Configuration {
   return &Configuration {
     maxLimit: 100,
     maxTotal: 1000,
     bucketCount: 25,
     cacheWorkers: 2,
     defaultLimit: 10,
+    factory: factory,
     dbPath: "./data/",
     queryPoolSize: 512,
     maxUnsortedSize: 2500,

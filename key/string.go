@@ -17,3 +17,7 @@ func (t Type) Bucket(count int) int {
 func (t Type) Serialize() BytesCloser {
   return ByteWrapper(t)
 }
+
+func Deserialize(raw []byte) Type {
+  return Type(raw)
+}

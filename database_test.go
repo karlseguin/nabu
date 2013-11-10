@@ -13,6 +13,7 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
   conf := Configure().QueryPoolSize(2).DefaultLimit(3).MaxLimit(4).
             MaxUnsortedSize(5).ResultsPoolSize(6, 7).BucketCount(8)
   db := New(conf)
+  defer db.Close()
   db.LoadSort("x", []key.Type{})
   spec.Expect(len(db.queryPool)).ToEqual(2)
   spec.Expect(len(db.sortedResults)).ToEqual(6)
@@ -29,6 +30,7 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
 func TestInsertANewDocument(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
+  defer db.Close()
   db.Update(NewDoc("1134d", []string{"index", "1", "age", "17"}, map[string]int{"trending": 1, "age":3}))
   doc := db.Get("1134d").(*Doc)
   spec.Expect(doc.id).ToEqual("1134d")
@@ -41,6 +43,7 @@ func TestInsertANewDocument(t *testing.T) {
 func TestUpdatesADocument(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
+  defer db.Close()
   db.Update(NewDoc("94", []string{"index", "1", "age", "18"}, map[string]int{"trending": 1, "age":3}))
   db.Update(NewDoc("94", []string{"index", "1", "index", "3"}, map[string]int{"trending": 10, "age":2}))
   doc := db.Get("94").(*Doc)
@@ -55,6 +58,7 @@ func TestUpdatesADocument(t *testing.T) {
 func TestRemovesADocument(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
+  defer db.Close()
   doc := NewDoc("94", []string{"index", "1", "age", "22"}, map[string]int{"trending": 10, "age":2})
   db.Update(doc)
   db.Remove(doc)
@@ -68,6 +72,7 @@ func TestRemovesADocument(t *testing.T) {
 func TestRemovesADocumentById(t *testing.T) {
   spec := gspec.New(t)
   db := SmallDB()
+  defer db.Close()
   doc := NewDoc("87", []string{"index", "1", "age", "9"}, map[string]int{"trending": 10, "age":2})
   db.Update(doc)
   db.RemoveById("87")
@@ -104,6 +109,7 @@ func (d *Doc) ReadMeta(meta *Meta) {
 
 func SmallDB() *Database {
   db := New(SmallConfig())
+  defer db.Close()
   db.LoadSort("created", []key.Type{})
   addIndex(db, "age$29", indexes.New("age$29"))
   return db
