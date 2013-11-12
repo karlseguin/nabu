@@ -117,5 +117,5 @@ func TestUnsortedResultCanBeSafelyReused(t *testing.T) {
   spec.Expect(string(result.Ids()[1])).ToEqual("flow")
   spec.Expect(len(result.Ids())).ToEqual(2)
   spec.Expect(result.Len()).ToEqual(2)
-  spec.Expect(cap(result.ids)).ToEqual(2500)
+  spec.Expect(cap(result.ids)).ToEqual(5000)
 }

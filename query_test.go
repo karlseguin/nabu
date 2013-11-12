@@ -175,7 +175,7 @@ func TestQueryWithNoIndexesIncludesTotalCount(t *testing.T) {
 
 func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().CacheWorkers(0).MaxTotal(4))
+  db := New(SmallConfig().CacheWorkers(0).MaxTotal(4))
   db.Close()
   db.LoadSort("created", []key.Type{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Limit(2).IncludeTotal().Execute()
@@ -185,7 +185,7 @@ func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
 
 func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().CacheWorkers(0).MaxTotal(4))
+  db := New(SmallConfig().CacheWorkers(0).MaxTotal(4))
   db.Close()
   db.LoadSort("created", []key.Type{"a", "b", "c", "d", "i", "j", "k"})
   result := db.Query("created").Desc().Limit(2).Desc().IncludeTotal().Execute()
@@ -344,7 +344,7 @@ func TestQueryBySortIncludesTotalDesc(t *testing.T) {
 
 func TestQueryBySortLimitsTheTotal(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().CacheWorkers(0).MaxTotal(3))
+  db := New(SmallConfig().CacheWorkers(0).MaxTotal(3))
   db.Close()
   db.LoadSort("created", []key.Type{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]key.Type{"b", "c", "f", "h", "g", "k", "z"}))
@@ -355,7 +355,7 @@ func TestQueryBySortLimitsTheTotal(t *testing.T) {
 
 func TestQueryBySortLimitsTheTotalDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().CacheWorkers(0).MaxTotal(3))
+  db := New(SmallConfig().CacheWorkers(0).MaxTotal(3))
   db.Close()
   db.LoadSort("created", []key.Type{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"})
   addIndex(db, "a$1", makeIndex([]key.Type{"b", "c", "f", "h", "g", "k", "z"}))
@@ -515,7 +515,7 @@ func TestQueryByIndexIncludesTotalDesc(t *testing.T) {
 
 func TestQueryByIndexLimitsTheTotal(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().CacheWorkers(0).MaxTotal(3))
+  db := New(SmallConfig().CacheWorkers(0).MaxTotal(3))
   db.Close()
   db.LoadSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]key.Type{"2", "3", "6", "7", "8", "9", "-1"}))
@@ -526,7 +526,7 @@ func TestQueryByIndexLimitsTheTotal(t *testing.T) {
 
 func TestQueryByIndexLimitsTheTotalDesc(t *testing.T) {
   spec := gspec.New(t)
-  db := New(Configure().CacheWorkers(0).MaxTotal(3))
+  db := New(SmallConfig().CacheWorkers(0).MaxTotal(3))
   db.Close()
   db.LoadSort("created", largeSort(1000))
   addIndex(db, "a$1", makeIndex([]key.Type{"2", "3", "6", "7", "8", "9", "-1"}))
@@ -536,7 +536,7 @@ func TestQueryByIndexLimitsTheTotalDesc(t *testing.T) {
 }
 
 func BenchmarkFindLargeWithNoTotal(b *testing.B) {
-  db := setupDb(Configure(), 100000, 80000, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 80000, 100000)
   db.Close()
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
@@ -545,7 +545,7 @@ func BenchmarkFindLargeWithNoTotal(b *testing.B) {
 }
 
 func BenchmarkFindLargeWithTotal(b *testing.B) {
-  db := setupDb(Configure(), 100000, 80000, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 80000, 100000)
   db.Close()
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
@@ -554,7 +554,7 @@ func BenchmarkFindLargeWithTotal(b *testing.B) {
 }
 
 func BenchmarkFindAverageWithNoTotal(b *testing.B) {
-  db := setupDb(Configure(), 100000, 50000, 100000, 1000, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 50000, 100000, 1000, 100000)
   db.Close()
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
@@ -563,7 +563,7 @@ func BenchmarkFindAverageWithNoTotal(b *testing.B) {
 }
 
 func BenchmarkFindAverageWithTotalUnderSortThreshold(b *testing.B) {
-  db := setupDb(Configure(), 100000, 50000, 100000, 4000, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 50000, 100000, 4000, 100000)
   db.Close()
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
@@ -572,7 +572,7 @@ func BenchmarkFindAverageWithTotalUnderSortThreshold(b *testing.B) {
 }
 
 func BenchmarkFindAverageWithTotalOverSortThreshold(b *testing.B) {
-  db := setupDb(Configure(), 100000, 50000, 100000, 6000, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 50000, 100000, 6000, 100000)
   db.Close()
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
@@ -581,7 +581,7 @@ func BenchmarkFindAverageWithTotalOverSortThreshold(b *testing.B) {
 }
 
 func BenchmarkFindSmallWithNoTotal(b *testing.B) {
-  db := setupDb(Configure(), 100000, 75000, 100000, 75000, 100000, 100, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 75000, 100000, 75000, 100000, 100, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
     db.Query("created").Where("index_0", "_", "index_2", "_", "index_4", "_").Execute().Close()
@@ -589,7 +589,7 @@ func BenchmarkFindSmallWithNoTotal(b *testing.B) {
 }
 
 func BenchmarkFindSmallWithTotal(b *testing.B) {
-  db := setupDb(Configure(), 100000, 75000, 100000, 75000, 100000, 100, 100000)
+  db := setupDb(Configure(nil).SkipLoad(), 100000, 75000, 100000, 75000, 100000, 100, 100000)
   b.ResetTimer()
   for i := 0; i < b.N; i++ {
     db.Query("created").Where("index_0", "_", "index_2", "_", "index_4", "_").IncludeTotal().Execute().Close()

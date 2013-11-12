@@ -51,7 +51,9 @@ func New(c *Configuration) *Database {
     db.unsortedResults <- newUnsortedResult(db)
   }
 
-  db.restore()
+  if c.skipLoad == false {
+    db.restore()
+  }
   return db
 }
 

@@ -3,6 +3,7 @@ package nabu
 type Configuration struct {
   maxLimit int
   maxTotal int
+  skipLoad bool
   dbPath string
   factory Factory
   bucketCount int
@@ -19,13 +20,14 @@ func Configure(factory Factory) *Configuration {
   return &Configuration {
     maxLimit: 100,
     maxTotal: 1000,
+    skipLoad: false,
     bucketCount: 25,
     cacheWorkers: 2,
     defaultLimit: 10,
     factory: factory,
     dbPath: "./data/",
     queryPoolSize: 512,
-    maxUnsortedSize: 2500,
+    maxUnsortedSize: 5000,
     maxIndexesPerQuery: 10,
     sortedResultPoolSize: 512,
     unsortedResultPoolSize: 512,
@@ -80,5 +82,10 @@ func (c *Configuration) MaxIndexesPerQuery(max int) *Configuration {
 
 func (c *Configuration) CacheWorkers(workers int) *Configuration {
   c.cacheWorkers = workers
+  return c
+}
+
+func (c *Configuration) SkipLoad() *Configuration {
+  c.skipLoad = true
   return c
 }

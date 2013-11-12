@@ -112,7 +112,7 @@ func (q *Query) execute(indexes indexes.Indexes) Result {
   if firstLength == 0 {
     return EmptyResult
   }
-  if q.sort.CanRank() && q.sortLength > firstLength*20 && firstLength <= q.db.maxUnsortedSize {
+  if q.sort.CanRank() && q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
     return q.findByIndex(indexes)
   }
   return q.findBySort(indexes)

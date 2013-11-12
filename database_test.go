@@ -10,8 +10,8 @@ import (
 // this is a very broad test, tsk tsk
 func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
   spec := gspec.New(t)
-  conf := Configure().QueryPoolSize(2).DefaultLimit(3).MaxLimit(4).
-            MaxUnsortedSize(5).ResultsPoolSize(6, 7).BucketCount(8)
+  conf := Configure(nil).QueryPoolSize(2).DefaultLimit(3).MaxLimit(4).
+            MaxUnsortedSize(5).ResultsPoolSize(6, 7).BucketCount(8).SkipLoad()
   db := New(conf)
   defer db.Close()
   db.LoadSort("x", []key.Type{})
@@ -116,7 +116,7 @@ func SmallDB() *Database {
 }
 
 func SmallConfig() *Configuration {
-  return Configure().QueryPoolSize(1).ResultsPoolSize(1, 1).CacheWorkers(0)
+  return Configure(nil).QueryPoolSize(1).ResultsPoolSize(1, 1).CacheWorkers(0).SkipLoad()
 }
 
 func addIndex(db *Database, name string, index *indexes.Index) {
