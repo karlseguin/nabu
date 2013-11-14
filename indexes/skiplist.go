@@ -3,8 +3,8 @@ package indexes
 import (
   "sync"
   "math"
-  "nabu/key"
   "math/rand"
+  "github.com/karlseguin/nabu/key"
 )
 
 const (

@@ -2,7 +2,7 @@ package indexes
 
 import (
   "sync"
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type Index struct {

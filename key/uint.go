@@ -1,7 +1,7 @@
 package key
 
 // import (
-//   "nabu/bytepool"
+//   "github.com/karlseguin/nabu/bytepool"
 //   "encoding/binary"
 // )
 

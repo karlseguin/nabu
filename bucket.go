@@ -2,7 +2,7 @@ package nabu
 
 import (
   "sync"
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type Bucket struct {

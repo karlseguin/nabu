@@ -3,8 +3,8 @@ package cache
 import (
   "time"
   "testing"
-  "nabu/indexes"
   "github.com/karlseguin/gspec"
+  "github.com/karlseguin/nabu/indexes"
 )
 
 func TestCacheHandelsMiss(t *testing.T) {

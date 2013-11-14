@@ -2,7 +2,7 @@ package indexes
 
 import (
   "testing"
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
   "github.com/karlseguin/gspec"
 )
 

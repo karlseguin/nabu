@@ -1,9 +1,9 @@
 package storage
 
 import (
-  "nabu/key"
-  "nabu/bytepool"
   "encoding/json"
+  "github.com/karlseguin/nabu/key"
+  "github.com/karlseguin/nabu/bytepool"
   "github.com/syndtr/goleveldb/leveldb"
   "github.com/syndtr/goleveldb/leveldb/iterator"
 )

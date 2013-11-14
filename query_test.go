@@ -3,10 +3,10 @@ package nabu
 import (
   "testing"
   "strconv"
-  "nabu/key"
   "math/rand"
-  "nabu/indexes"
   "github.com/karlseguin/gspec"
+  "github.com/karlseguin/nabu/key"
+  "github.com/karlseguin/nabu/indexes"
 )
 
 func TestQueryCapsTheLimit(t *testing.T) {

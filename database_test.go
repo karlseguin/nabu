@@ -2,9 +2,9 @@ package nabu
 
 import (
   "testing"
-  "nabu/key"
-  "nabu/indexes"
   "github.com/karlseguin/gspec"
+  "github.com/karlseguin/nabu/key"
+  "github.com/karlseguin/nabu/indexes"
 )
 
 // this is a very broad test, tsk tsk

@@ -1,7 +1,7 @@
 package nabu
 
 import (
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type Document interface {

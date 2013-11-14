@@ -1,7 +1,7 @@
 package indexes
 
 import (
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type Sort interface {

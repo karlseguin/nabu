@@ -2,8 +2,8 @@ package indexes
 
 import (
   "testing"
-  "nabu/key"
   "github.com/karlseguin/gspec"
+  "github.com/karlseguin/nabu/key"
 )
 
 //static indexes are padded, so this isn't as meaningless as it seems

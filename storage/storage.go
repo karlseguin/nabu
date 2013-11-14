@@ -1,7 +1,7 @@
 package storage
 
 import (
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type Storage interface {

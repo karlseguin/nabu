@@ -2,12 +2,12 @@ package cache
 
 import (
   "sync"
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type Change struct {
-  id key.Type
   added bool
+  id key.Type
   indexName string
 }
 

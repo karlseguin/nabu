@@ -5,8 +5,8 @@ import (
   "sync"
   "time"
   "strings"
-  "nabu/key"
-  "nabu/indexes"
+  "github.com/karlseguin/nabu/key"
+  "github.com/karlseguin/nabu/indexes"
   "container/list"
 )
 

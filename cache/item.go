@@ -4,7 +4,7 @@ import (
   "sort"
   "sync"
   "time"
-  "nabu/indexes"
+  "github.com/karlseguin/nabu/indexes"
   "container/list"
 )
 

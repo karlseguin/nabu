@@ -3,10 +3,10 @@ package nabu
 import (
   "fmt"
   "sync"
-  "nabu/key"
-  "nabu/cache"
-  "nabu/indexes"
-  "nabu/storage"
+  "github.com/karlseguin/nabu/key"
+  "github.com/karlseguin/nabu/cache"
+  "github.com/karlseguin/nabu/indexes"
+  "github.com/karlseguin/nabu/storage"
 )
 
 type Factory func(id key.Type, data []byte) Document

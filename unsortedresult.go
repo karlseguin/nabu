@@ -4,7 +4,7 @@ package nabu
 
 import (
   "sort"
-  "nabu/key"
+  "github.com/karlseguin/nabu/key"
 )
 
 type UnsortedResult struct {

@@ -4,8 +4,8 @@ import (
   "sort"
   "testing"
   "strconv"
-  "nabu/key"
   "github.com/karlseguin/gspec"
+  "github.com/karlseguin/nabu/key"
 )
 
 func TestIndexAddAnItem(t *testing.T) {
