@@ -73,11 +73,12 @@ func (s *Skiplist) Set(id key.Type, rank int) {
   }
 
   current := s.head
-  for i := level; i >= 0; i-- {
+  for i := s.levels; i >= 0; i-- {
     for ; current.next[i] != nil; current = current.next[i] {
       next := current.next[i]
       if next.rank > rank || (next.rank == rank && next.id > id) || next == s.tail { break }
     }
+    if i > level { continue }
     node.next[i] = current.next[i]
     current.next[i] = node
     node.prev = current
