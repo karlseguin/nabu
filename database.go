@@ -3,6 +3,7 @@ package nabu
 import (
   "fmt"
   "sync"
+  "encoding/json"
   "github.com/karlseguin/nabu/key"
   "github.com/karlseguin/nabu/cache"
   "github.com/karlseguin/nabu/indexes"
@@ -17,8 +18,9 @@ type Database struct {
   cache *cache.Cache
   queryPool chan *Query
   sortLock sync.RWMutex
-  storage storage.Storage
   buckets map[int]*Bucket
+  iStorage storage.Storage
+  dStorage storage.Storage
   indexLock sync.RWMutex
   sorts map[string]indexes.Sort
   sortedResults chan *SortedResult
@@ -29,9 +31,10 @@ type Database struct {
 func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
-    storage: storage.New(c.dbPath),
     sorts: make(map[string]indexes.Sort),
     indexes: make(map[string]*indexes.Index),
+    iStorage: storage.New(c.dbPath + "indexes"),
+    dStorage: storage.New(c.dbPath + "documents"),
     queryPool: make(chan *Query, c.queryPoolSize),
     buckets: make(map[int]*Bucket, c.bucketCount),
     sortedResults: make(chan *SortedResult, c.sortedResultPoolSize),
@@ -71,6 +74,9 @@ func (d *Database) Query(name string) *Query {
 
 func (d *Database) LoadSort(sortName string, ids []key.Type) {
   d.getOrCreateSort(sortName, len(ids)).Load(ids)
+  if d.loading == false {
+    d.iStorage.Put([]byte(sortName), serializeValue(ids))
+  }
 }
 
 func (d *Database) AppendSort(sortName string, id key.Type) {
@@ -98,7 +104,9 @@ func (d *Database) Update(doc Document) {
     d.addDocumentSort(sort, meta.id, rank)
   }
   if d.loading == false {
-    d.storage.Put(meta.id, doc)
+    idBuffer := meta.id.Serialize()
+    defer idBuffer.Close()
+    d.dStorage.Put(idBuffer.Bytes(), serializeValue(doc))
   }
 }
 
@@ -114,7 +122,9 @@ func (d *Database) Remove(doc Document) {
   }
   d.removeDocument(doc, id)
   if d.loading == false {
-    d.storage.Remove(id)
+    idBuffer := id.Serialize()
+    defer idBuffer.Close()
+    d.dStorage.Remove(idBuffer.Bytes())
   }
 }
 
@@ -135,7 +145,10 @@ func (d *Database) EndLoad() {
 }
 
 func (d *Database) Close() error {
-  return d.storage.Close()
+  derr := d.dStorage.Close()
+  ierr := d.iStorage.Close()
+  if derr != nil { return derr }
+  return ierr
 }
 
 func (d *Database) getMeta(id key.Type, bucket int) *Meta {
@@ -258,9 +271,15 @@ func (d *Database) changed(indexName string, id key.Type, updated bool) {
 
 func (d *Database) restore() {
   d.BeginLoad()
-  iter := d.storage.Iterator()
+  iter := d.dStorage.Iterator()
   for iter.Next() {
-    d.Update(d.factory(iter.Current()))
+    id, value := iter.Current()
+    d.Update(d.factory(key.Deserialize(id), value))
+  }
+  iter = d.iStorage.Iterator()
+  for iter.Next() {
+    id, value := iter.Current()
+    d.LoadSort(string(id), deserializeIndex(value))
   }
   d.EndLoad()
 }
@@ -275,4 +294,18 @@ func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bo
     if exists == false { ok = false }
   }
   return ok
+}
+
+func serializeValue(value interface{}) []byte {
+  serialized, err := json.Marshal(value)
+  if err != nil { panic(err) }
+  return serialized
+}
+
+func deserializeIndex(raw []byte) []key.Type {
+  var index []key.Type
+  if err := json.Unmarshal(raw, &index); err != nil {
+    panic(err)
+  }
+  return index
 }

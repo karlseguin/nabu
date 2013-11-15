@@ -1,20 +1,16 @@
 package storage
 
-import (
-  "github.com/karlseguin/nabu/key"
-)
-
 type Storage interface {
   Close() error
-  Remove(id key.Type)
-  Put(id key.Type, value interface{})
+  Remove(id []byte)
+  Put(id, value []byte)
   Iterator() Iterator
 }
 
 type Iterator interface {
   Close()
   Next() bool
-  Current() (key.Type, []byte)
+  Current() ([]byte, []byte)
 }
 
 func New(path string) Storage {

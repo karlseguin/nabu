@@ -109,7 +109,7 @@ Pools are currently blocking. Hooks will eventually be provided to gauge the hea
 ### Sorts
 Two types of sorting indexes exist: static and dynamic. Dynamic sorts are updated as documented are added and removed. This is achieved by calling `Sort` within your documents `ReadMeta` method and, for all intents and purposes, acts like any other index (except it's sorted).
 
-Static indexes are more efficient but cannot be easily changed. Instead, they are meant to be updated in batches (possibly by a scheduled background job). For example, you might run a hourly job that ranks trending documents, asynchronously from documents being added and remove.d 
+Static indexes are more efficient but cannot be easily changed. Instead, they are meant to be updated in batches (possibly by a scheduled background job). For example, you might run a hourly job that ranks trending documents, asynchronously from documents being added and removed. 
 
 A static indexes is loaded (or updated) in full by calling `db.LoadSort`. The ids are provided as an array and the ranking is simply implied by the array's order. 
 
