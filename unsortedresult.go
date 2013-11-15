@@ -1,5 +1,3 @@
-// A result which expects unsorted results and sorts them
-
 package nabu
 
 import (
@@ -7,6 +5,7 @@ import (
   "github.com/karlseguin/nabu/key"
 )
 
+// A result container which expects to be populated with unordered documents
 type UnsortedResult struct {
   found int
   total int

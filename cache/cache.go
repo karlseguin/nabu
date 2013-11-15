@@ -1,3 +1,9 @@
+// TODO (karl): make cache staleness duration configurable
+
+// Nabu's query cache. Updates to documents incrementally
+// updates cached results. The cache's growth is unbound. However,
+// cached indexes which have not been used for 10 minutes will
+// be cleaned up
 package cache
 
 import (
@@ -5,15 +11,16 @@ import (
   "sync"
   "time"
   "strings"
+  "container/list"
   "github.com/karlseguin/nabu/key"
   "github.com/karlseguin/nabu/indexes"
-  "container/list"
 )
 
 type IndexFetcher interface {
   LookupIndexes(indexNames []string, target indexes.Indexes) bool
 }
 
+// The cache manager
 type Cache struct {
   sync.RWMutex
   lru *list.List
@@ -26,6 +33,7 @@ type Cache struct {
   buckets map[string]*ChangeBucket
 }
 
+// Creates a new cache
 func New(fetcher IndexFetcher, workerCount int) *Cache {
   c := &Cache {
     lru: list.New(),
@@ -41,6 +49,7 @@ func New(fetcher IndexFetcher, workerCount int) *Cache {
   return c
 }
 
+// Notify the cache that the specific index was updated (id was added or removed)
 func (c *Cache) Changed(indexName string, id key.Type, added bool) {
   c.changeQueue <- &Change{
     id: id,
@@ -49,6 +58,9 @@ func (c *Cache) Changed(indexName string, id key.Type, added bool) {
   }
 }
 
+// Given a set of indexes, get the cached representation. When no
+// cached representation exists, one will be built in the background
+// for subsequent calls
 func (c *Cache) Get(indexNames []string) (indexes.Indexes, bool) {
   if cached, exists := c.get(indexNames); exists {
     return cached, true
@@ -88,6 +100,7 @@ func (c *Cache) get(indexNames []string) (indexes.Indexes, bool) {
   return nil, false
 }
 
+// Whenever a cache value is used, it's promoted
 func (c *Cache) promote(item *Item) {
   select {
     case c.promotables <- item:
@@ -95,6 +108,8 @@ func (c *Cache) promote(item *Item) {
   }
 }
 
+// background workers which build new cached indexes
+// or incrementally update existing ones
 func (c *Cache) workers() {
   for {
     select {
@@ -108,6 +123,8 @@ func (c *Cache) workers() {
   }
 }
 
+// We keep a reverse map so that when an actual index is updated
+// we know which cached versions need to be incrementally updated
 func (c *Cache) reverseIndex(item *Item) {
   c.bucketLock.Lock()
   defer c.bucketLock.Unlock()
@@ -122,6 +139,7 @@ func (c *Cache) reverseIndex(item *Item) {
   }
 }
 
+// Update a cached index
 func (c *Cache) applyChange(change *Change) {
   c.bucketLock.RLock()
   bucket, exists := c.buckets[change.indexName]
@@ -130,6 +148,8 @@ func (c *Cache) applyChange(change *Change) {
   bucket.process(change)
 }
 
+// Promote recently used cache items. At every 50 promotions,
+// see if any stale cached index should be removed
 func (c *Cache) maintenance() {
   i := 0
   for {
@@ -146,6 +166,10 @@ func (c *Cache) maintenance() {
   }
 }
 
+// Remove stale cached indexes. Since this is ordered by time,
+// we can immediately break out once we've found a non-stale index.
+// Also, to prevent this from blocking, we limit how many stale indexes
+// we can clean up in a single pass
 func (c *Cache) gc() {
   stale := time.Now().Add(time.Minute * -10)
   for i := 0; i < 100; i++ {

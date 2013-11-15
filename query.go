@@ -6,6 +6,7 @@ import (
   "github.com/karlseguin/nabu/indexes"
 )
 
+// Build and executes a query against the database
 type Query struct {
   upto int
   limit int
@@ -21,6 +22,7 @@ type Query struct {
   indexes indexes.Indexes
 }
 
+// Queries are statically created upfront and reused
 func newQuery(db *Database) *Query {
   q := &Query{
     db: db,
@@ -32,6 +34,11 @@ func newQuery(db *Database) *Query {
   return q
 }
 
+// Filter results for the query and value. Where can be called multiple
+// times. Each must have an even number of parameters (indexName, value):
+//
+//    Where("type", "dog", "size", "small").Where("color", "white")
+//
 func (q *Query) Where(params ...string) *Query {
   l := len(params)
   for i := 0; i < l; i+=2 {
@@ -41,11 +48,15 @@ func (q *Query) Where(params ...string) *Query {
   return q
 }
 
+// Don't cache the result or use the cache to generate the result
+// Caches are incrementally updated as changes come in, so this should
+// only be used for one-off queries
 func (q *Query) NoCache() *Query {
   q.cache = false
   return q
 }
 
+// Limit the number of documents returned
 func (q *Query) Limit(limit int) *Query {
   q.limit = limit
   if q.limit >  q.db.maxLimit {
@@ -57,22 +68,32 @@ func (q *Query) Limit(limit int) *Query {
   return q
 }
 
-func (q *Query) Desc() *Query {
-  q.desc = true
-  return q
-}
-
+// Paging offset to start at
 func (q *Query) Offset(offset int) *Query {
   q.offset = offset
   return q
 }
 
+// Sort the documents by descending order
+func (q *Query) Desc() *Query {
+  q.desc = true
+  return q
+}
+
+
+// By default, a total count of matching document won't be returned.
+// Instead, only the results HasMore will be set. Including the total
+// count is less efficient (and unecessary for infinite scrolling or
+// for requests beyond the first page). The total will be capped at the
+// configured MaxTotal
 func (q *Query) IncludeTotal() *Query {
   q.includeTotal = true
   q.upto = q.db.maxTotal
   return q
 }
 
+// Executes the query, returning a result. The result must be closed
+// once you are done with it
 func (q *Query) Execute() Result {
   defer q.reset()
   indexCount := q.indexCount
@@ -96,6 +117,7 @@ func (q *Query) Execute() Result {
   return q.execute(indexes)
 }
 
+// Loads the indexes used by the query
 func (q *Query) loadIndexes() indexes.Indexes {
   if q.db.LookupIndexes(q.indexNames[0:q.indexCount], q.indexes) == false {
     return nil
@@ -107,6 +129,10 @@ func (q *Query) loadIndexes() indexes.Indexes {
   return indexes
 }
 
+// Determines wither an index-based query will be used or a sort-based query.
+// The choice is based on the type of sort index (whether it can rank documents),
+// whether the smallest index fits within the configured maximum unsorted size and,
+// whether the smallest index is sufficiently small compared to the sort index.
 func (q *Query) execute(indexes indexes.Indexes) Result {
   firstLength := len(indexes[0].Ids)
   if firstLength == 0 {
@@ -118,6 +144,8 @@ func (q *Query) execute(indexes indexes.Indexes) Result {
   return q.findBySort(indexes)
 }
 
+// An optimized code path for when no index is provided (just walking through
+// a sort index)
 func (q *Query) findWithNoIndexes() Result {
   limit := q.limit
   sortLength := q.sortLength
@@ -144,6 +172,8 @@ func (q *Query) findWithNoIndexes() Result {
   return result
 }
 
+// Filter by indexes, then sort. Ideal when the smallest index is quite a bit
+// smaller than the sort index
 func (q *Query) findByIndex(indexes indexes.Indexes) Result {
   first := indexes[0]
   indexCount := len(indexes)
@@ -162,6 +192,7 @@ func (q *Query) findByIndex(indexes indexes.Indexes) Result {
   return result.finalize(q)
 }
 
+// Walk the sort index and filter out results
 func (q *Query) findBySort(idx indexes.Indexes) Result {
   found := 0
   limit := q.limit
@@ -200,6 +231,7 @@ func (q *Query) findBySort(idx indexes.Indexes) Result {
   return result
 }
 
+// Reset the query and release it back into the pool
 func (q *Query) reset() {
   q.sort = nil
   q.offset = 0

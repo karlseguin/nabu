@@ -24,6 +24,8 @@ func init() {
   }
 }
 
+// A dynamic sorted index. Ideal for sorted indexes which are frequently
+// modified
 type Skiplist struct {
   levels int
   lock sync.RWMutex
@@ -57,6 +59,7 @@ func newSkiplist() *Skiplist {
   }
 }
 
+// Stores a id within the index with the specified rank
 func (s *Skiplist) Set(id key.Type, rank int) {
   s.lock.Lock()
   defer s.lock.Unlock()
@@ -92,12 +95,15 @@ func (s *Skiplist) Set(id key.Type, rank int) {
   s.lookup[id] = rank
 }
 
+// Removes the id from the index
 func (s *Skiplist) Remove(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
   s.remove(id)
 }
 
+// Appends the id to the end of the index giving it a rank of
+// the current max rank + 1.
 func (s *Skiplist) Append(id key.Type) {
   s.lock.RLock()
   highRank := s.tail.prev.rank
@@ -105,6 +111,8 @@ func (s *Skiplist) Append(id key.Type) {
   s.Set(id, highRank + 1)
 }
 
+// Prepends the id to the end of the index giving it a rank of
+// the current min rank - 1 (this could negative)
 func (s *Skiplist) Prepend(id key.Type) {
   s.lock.RLock()
   var lowRank int
@@ -135,6 +143,7 @@ func (s *Skiplist) remove(id key.Type) {
   delete(s.lookup, id)
 }
 
+// Determins the level to place a new item (0-31)
 func (s *Skiplist) getLevel() int {
   roll := rand.Uint32()
   for i := 0; i <= s.levels; i++ {
@@ -148,16 +157,21 @@ func (s *Skiplist) getLevel() int {
   return s.levels
 }
 
+// Number of items in the index
 func (s *Skiplist) Len() int {
   s.lock.RLock()
   defer s.lock.RUnlock()
   return len(s.lookup)
 }
 
+// This index is able to rank documents, and thus can be
+// used for the post-sorting used by index-first queries
 func (s *Skiplist) CanRank() bool {
   return true
 }
 
+// Bulk loads ids into the index. This replaces any existing values.
+// The rank is implied by the array order.
 func (s *Skiplist) Load(ids []key.Type) {
   s.lock.Lock()
   s.head.next = make([]*SkiplistNode, maxLevel)
@@ -170,6 +184,7 @@ func (s *Skiplist) Load(ids []key.Type) {
   }
 }
 
+// Ranks a document
 func (s *Skiplist) Rank(id key.Type) (int, bool) {
   s.lock.RLock()
   rank, exists := s.lookup[id]
@@ -177,6 +192,7 @@ func (s *Skiplist) Rank(id key.Type) (int, bool) {
   return rank, exists
 }
 
+// Generates a forward iterator (from low rank to high)
 func (s *Skiplist) Forwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
   s.lock.RLock()
@@ -189,6 +205,7 @@ func (s *Skiplist) Forwards(offset int) Iterator {
   }
 }
 
+// Generates a backward iterator (from high rank to low)
 func (s *Skiplist) Backwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
   s.lock.RLock()
@@ -201,38 +218,46 @@ func (s *Skiplist) Backwards(offset int) Iterator {
   }
 }
 
+// Forward skip list iterator
 type SkipListForwardIterator struct {
   lock *sync.RWMutex
   node *SkiplistNode
 }
 
+// Move to the next (higher ranked) item
 func (i *SkipListForwardIterator) Next() key.Type {
   i.node = i.node.next[0]
   return i.Current()
 }
 
+// Key for the current item
 func (i *SkipListForwardIterator) Current() key.Type {
   return i.node.id
 }
 
+// Release the iterator
 func (i *SkipListForwardIterator) Close() {
   i.lock.RUnlock()
 }
 
+// Backward skip list iterator
 type SkipListBackwardsIterator struct {
   lock *sync.RWMutex
   node *SkiplistNode
 }
 
+// Move to the next (lower ranked) item
 func (i *SkipListBackwardsIterator) Next() key.Type {
   i.node = i.node.prev
   return i.Current()
 }
 
+// Key for the current item
 func (i *SkipListBackwardsIterator) Current() key.Type {
   return i.node.id
 }
 
+// Release the iterator
 func (i *SkipListBackwardsIterator) Close() {
   i.lock.RUnlock()
 }

@@ -5,6 +5,7 @@ import (
   "github.com/syndtr/goleveldb/leveldb/iterator"
 )
 
+// LevelDb based storage
 type Leveldb struct {
   db *leveldb.DB
 }

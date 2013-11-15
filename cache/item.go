@@ -8,6 +8,7 @@ import (
   "container/list"
 )
 
+// A cached index
 type Item struct {
   key string
   sync.RWMutex
@@ -17,6 +18,8 @@ type Item struct {
   sources indexes.Indexes
 }
 
+// Creates a new cached index. Cached indexes are always sourced from multiple
+// indexes and distilled into a single index
 func newItem(fetcher IndexFetcher, key string, indexNames []string) *Item {
   sources := make(indexes.Indexes, len(indexNames))
   if fetcher.LookupIndexes(indexNames, sources) == false {
@@ -29,6 +32,9 @@ func newItem(fetcher IndexFetcher, key string, indexNames []string) *Item {
   }
 }
 
+// Indicates whether the index is built and can safely be used
+// as well as whether it's time to promote the index. Cached indexes
+// are only promoted once per minute
 func (item *Item) readyAndPromotable() (bool, bool) {
   item.RLock()
   promoted := item.promoted
@@ -47,6 +53,8 @@ func (item *Item) readyAndPromotable() (bool, bool) {
   return true, true
 }
 
+// Build the cached index. This is similar to what the main database
+// Query.Execute does.
 func (item *Item) build() {
   item.sources.RLock()
   defer item.sources.RUnlock()
@@ -71,6 +79,7 @@ func (item *Item) build() {
   item.Unlock()
 }
 
+// Process a change
 func (item *Item) change(change *Change) {
   if change.added {
     item.added(change)
@@ -79,6 +88,9 @@ func (item *Item) change(change *Change) {
   }
 }
 
+// Process an add change. Adds are efficient, and simply require
+// a loop through all the original indexes to see if the newly added
+// id exists in all indexes
 func (item *Item) added(change *Change) {
   id := change.id
   indexes := item.sources
@@ -93,6 +105,8 @@ func (item *Item) added(change *Change) {
   item.index[0].Add(id)
 }
 
+// Process a remove change. Since queries only support intersection
+// a remove change is guaranteed to remove the id from the cached index
 func (item *Item) removed(change *Change) {
   item.index[0].Remove(change.id)
 }

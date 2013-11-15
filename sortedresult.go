@@ -1,11 +1,10 @@
-// A result which expects already sorted values to be added
-
 package nabu
 
 import (
   "github.com/karlseguin/nabu/key"
 )
 
+// A result container which expects to be populated with pre-ordered documents
 type SortedResult struct {
   found int
   total int
