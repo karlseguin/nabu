@@ -5,6 +5,9 @@ import (
   "github.com/karlseguin/nabu/key"
 )
 
+// A static sort index not capable of ranking documents. This index
+// is ideal when the sort index doesn't update frequently (possibly
+// only updated asynchronously on a schedule) and are small
 type StaticSort struct {
   length int
   ids []key.Type
@@ -12,16 +15,20 @@ type StaticSort struct {
   lock sync.RWMutex
 }
 
+// Get the number of documents indexed
 func (s *StaticSort) Len() int {
   s.lock.RLock()
   defer s.lock.RUnlock()
   return s.length
 }
 
+// Whether this type of index can rank (a StaticSort index cannot rank)
 func (s *StaticSort) CanRank() bool {
   return false
 }
 
+// Bulk load ids into the index. This replaces any existing
+// values. The order is implied from the array order
 func (s *StaticSort) Load(ids []key.Type) {
   length := len(ids)+2
   padded := make([]key.Type, length)
@@ -36,10 +43,12 @@ func (s *StaticSort) Load(ids []key.Type) {
   s.lock.Unlock()
 }
 
+// Always returns 0
 func (s *StaticSort) Rank(id key.Type) (int, bool) {
   return 0, false
 }
 
+// Append an id
 func (s *StaticSort) Append(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
@@ -47,6 +56,7 @@ func (s *StaticSort) Append(id key.Type) {
   s.modify(id, 0, l, l-1)
 }
 
+// Prepend an id
 func (s *StaticSort) Prepend(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
@@ -64,6 +74,7 @@ func (s *StaticSort) modify(id key.Type, offset, newNull, newIndex int) {
   s.ids = padded
 }
 
+// Returns a forward iterator
 func (s *StaticSort) Forwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
   s.lock.RLock()
@@ -74,6 +85,7 @@ func (s *StaticSort) Forwards(offset int) Iterator {
   }
 }
 
+// Returns a backward iterator
 func (s *StaticSort) Backwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
 
@@ -85,40 +97,48 @@ func (s *StaticSort) Backwards(offset int) Iterator {
   }
 }
 
+// Forward iterator through a static sort (rankable or not) index
 type StaticSortForwardIterator struct {
   position int
   ids []key.Type
   lock *sync.RWMutex
 }
 
+// Moves forward and gets the value
 func (i *StaticSortForwardIterator) Next() key.Type {
   i.position++
   return i.Current()
 }
 
+// Gets the value
 func (i *StaticSortForwardIterator) Current() key.Type {
   return i.ids[i.position]
 }
 
+// Releases the iterator
 func (i *StaticSortForwardIterator) Close() {
   i.lock.RUnlock()
 }
 
+// Backward iterator through a static sort (rankable or not) index
 type StaticSortBackwardsIterator struct {
   position int
   ids []key.Type
   lock *sync.RWMutex
 }
 
+// Moves backward and gets the value
 func (i *StaticSortBackwardsIterator) Next() key.Type {
   i.position--
   return i.Current()
 }
 
+// Gets the value
 func (i *StaticSortBackwardsIterator) Current() key.Type {
   return i.ids[i.position]
 }
 
+// Releases the iterator
 func (i *StaticSortBackwardsIterator) Close() {
   i.lock.RUnlock()
 }

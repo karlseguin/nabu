@@ -5,6 +5,10 @@ import (
   "github.com/karlseguin/nabu/key"
 )
 
+// A static sort index capable of ranking documents. This index
+// is ideal when the sort index doesn't update frequently (possibly
+// only updated asynchronously on a schedule) but is rather large
+// (say, > 5000 items)
 type StaticRankSort struct {
   length int
   ids []key.Type
@@ -13,16 +17,22 @@ type StaticRankSort struct {
   lookup map[key.Type]int
 }
 
+
+// Get the number of documents indexed
 func (s *StaticRankSort) Len() int {
   s.lock.RLock()
   defer s.lock.RUnlock()
   return s.length
 }
 
+// Whether this type of index can rank (a StaticRankSort index can
+// always rank)
 func (s *StaticRankSort) CanRank() bool {
   return true
 }
 
+// Bulk load ids into the index. This replaces any existing
+// values. The order is implied from the array order
 func (s *StaticRankSort) Load(ids []key.Type) {
   length := len(ids)+2
   padded := make([]key.Type, length)
@@ -42,6 +52,7 @@ func (s *StaticRankSort) Load(ids []key.Type) {
   s.lock.Unlock()
 }
 
+// Get the rank for an individual id
 func (s *StaticRankSort) Rank(id key.Type) (int, bool) {
   s.lock.RLock()
   defer s.lock.RUnlock()
@@ -49,6 +60,7 @@ func (s *StaticRankSort) Rank(id key.Type) (int, bool) {
   return rank, exists
 }
 
+// Append an id
 func (s *StaticRankSort) Append(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
@@ -56,6 +68,7 @@ func (s *StaticRankSort) Append(id key.Type) {
   s.modify(id, 0, l, l-1, s.lookup[s.ids[l-2]]+1)
 }
 
+// Prepend an id
 func (s *StaticRankSort) Prepend(id key.Type) {
   s.lock.Lock()
   defer s.lock.Unlock()
@@ -74,6 +87,7 @@ func (s *StaticRankSort) modify(id key.Type, offset, newNull, newIndex, newRank 
   s.lookup[id] = newRank
 }
 
+// Returns a forward iterator
 func (s *StaticRankSort) Forwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
   s.lock.RLock()
@@ -84,6 +98,7 @@ func (s *StaticRankSort) Forwards(offset int) Iterator {
   }
 }
 
+// Returns a backward iterator
 func (s *StaticRankSort) Backwards(offset int) Iterator {
   if offset > s.Len() { return emptyIterator }
 
