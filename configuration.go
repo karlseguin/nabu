@@ -20,6 +20,7 @@ type Configuration struct {
   maxIndexesPerQuery int
   sortedResultPoolSize int
   unsortedResultPoolSize int
+  aggregatable map[string]bool
   maxCacheStaleness time.Duration
 }
 
@@ -41,6 +42,7 @@ func Configure(factory Factory) *Configuration {
     maxIndexesPerQuery: 10,
     sortedResultPoolSize: 512,
     unsortedResultPoolSize: 512,
+    aggregatable: make(map[string]bool),
     maxCacheStaleness: time.Minute * 10,
   }
 }
@@ -125,5 +127,13 @@ func (c *Configuration) SkipLoad() *Configuration {
 // Instructs the database to not load data from disk on startup
 func (c *Configuration) MaxCacheStaleness(duration time.Duration) *Configuration {
   c.maxCacheStaleness = duration
+  return c
+}
+
+// Indicates that the index can be used in aggregate functions (like Distinct).
+func (c *Configuration) Aggregatable(indexNames ...string) *Configuration {
+  for _, name := range indexNames {
+    c.aggregatable[name] = true
+  }
   return c
 }

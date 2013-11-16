@@ -256,6 +256,7 @@ func (d *Database) update(doc Document, meta *Meta, old *Meta, bucket int) {
 
 // Indexes the document
 func (d *Database) addDocumentIndex(baseName string, values []string, id key.Type) {
+  shouldIndexValue := d.aggregatable[baseName]
   for _, value := range values {
     indexName := baseName + "$" + value
     d.indexLock.RLock()
@@ -269,7 +270,7 @@ func (d *Database) addDocumentIndex(baseName string, values []string, id key.Typ
         d.indexes[indexName] = index
       }
       d.indexLock.Unlock()
-      if exists == false {
+      if exists == false && shouldIndexValue {
         d.addIndexValue(baseName, value)
       }
     }
@@ -318,13 +319,14 @@ func (d *Database) getOrCreateSort(sortName string, length int) indexes.Sort {
 
 // Unindexes the document
 func (d *Database) removeDocumentIndex(baseName string, values []string, id key.Type) {
+  shouldIndexValue := d.aggregatable[baseName]
   for _, value := range values {
     indexName := baseName + "$" + value
     d.indexLock.RLock()
     index, exists := d.indexes[indexName]
     d.indexLock.RUnlock()
     if exists == false { return }
-    if index.Remove(id) == 0 {
+    if index.Remove(id) == 0 && shouldIndexValue {
       d.removeIndexValue(baseName, value)
     }
     d.changed(indexName, id, false)
