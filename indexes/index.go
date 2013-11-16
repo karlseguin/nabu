@@ -29,10 +29,11 @@ func (i *Index) Add(id key.Type) {
 }
 
 // Remove an id from the index
-func (i *Index) Remove(id key.Type) {
+func (i *Index) Remove(id key.Type) int {
   i.Lock()
   defer i.Unlock()
   delete(i.Ids, id)
+  return len(i.Ids)
 }
 
 // Determine whether or not the index contains an item

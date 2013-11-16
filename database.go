@@ -56,7 +56,9 @@ type Database struct {
   iStorage storage.Storage
   dStorage storage.Storage
   indexLock sync.RWMutex
+  indexValueLock sync.RWMutex
   sorts map[string]indexes.Sort
+  indexValues map[string][]string
   sortedResults chan *SortedResult
   indexes map[string]*indexes.Index
   unsortedResults chan *UnsortedResult
@@ -68,6 +70,7 @@ func New(c *Configuration) *Database {
   db := &Database {
     Configuration: c,
     sorts: make(map[string]indexes.Sort),
+    indexValues: make(map[string][]string),
     indexes: make(map[string]*indexes.Index),
     iStorage: storage.New(c.dbPath + "indexes"),
     dStorage: storage.New(c.dbPath + "documents"),
@@ -163,8 +166,8 @@ func (d *Database) Remove(doc Document) {
   meta := newMeta()
   doc.ReadMeta(meta)
   id := meta.id
-  for index, _ := range meta.indexes {
-    d.removeDocumentIndex(index, id)
+  for baseName, values := range meta.indexes {
+    d.removeDocumentIndex(baseName, values, id)
   }
   for sort, _ := range meta.sorts {
     d.removeDocumentSort(sort, id)
@@ -185,6 +188,13 @@ func (d *Database) RemoveById(id key.Type) {
   if doc != nil {
     d.Remove(doc)
   }
+}
+
+// Returns the distinct values contained in an index
+func (d *Database) Distinct(indexName string) []string {
+  d.indexValueLock.RLock()
+  defer d.indexValueLock.RUnlock()
+  return d.indexValues[indexName]
 }
 
 // Closes the database
@@ -221,8 +231,8 @@ func (d *Database) getBucket(key key.Type) int {
 // Inserts a new document
 func (d *Database) insert(doc Document, meta *Meta, bucket int) {
   id := meta.id
-  for index, _ := range meta.indexes {
-    d.addDocumentIndex(index, id)
+  for baseName, values := range meta.indexes {
+    d.addDocumentIndex(baseName, values, id)
   }
   d.addDocument(doc, id, bucket)
 }
@@ -231,35 +241,41 @@ func (d *Database) insert(doc Document, meta *Meta, bucket int) {
 func (d *Database) update(doc Document, meta *Meta, old *Meta, bucket int) {
   id := meta.id
 
-  for index, _ := range meta.indexes {
-    if _, exists := old.indexes[index]; exists {
-      delete(old.indexes, index)
+  for baseName, values := range meta.indexes {
+    if _, exists := old.indexes[baseName]; exists {
+      delete(old.indexes, baseName)
     } else {
-      d.addDocumentIndex(index, id)
+      d.addDocumentIndex(baseName, values, id)
     }
   }
-  for index, _ := range old.indexes {
-    d.removeDocumentIndex(index, id)
+  for baseName, values := range old.indexes {
+    d.removeDocumentIndex(baseName, values, id)
   }
   d.addDocument(doc, id, bucket)
 }
 
 // Indexes the document
-func (d *Database) addDocumentIndex(indexName string, id key.Type) {
-  d.indexLock.RLock()
-  index, exists := d.indexes[indexName]
-  d.indexLock.RUnlock()
-  if exists == false {
-    d.indexLock.Lock()
-    index, exists = d.indexes[indexName]
+func (d *Database) addDocumentIndex(baseName string, values []string, id key.Type) {
+  for _, value := range values {
+    indexName := baseName + "$" + value
+    d.indexLock.RLock()
+    index, exists := d.indexes[indexName]
+    d.indexLock.RUnlock()
     if exists == false {
-      index = indexes.New(indexName)
-      d.indexes[indexName] = index
+      d.indexLock.Lock()
+      index, exists = d.indexes[indexName]
+      if exists == false {
+        index = indexes.New(indexName)
+        d.indexes[indexName] = index
+      }
+      d.indexLock.Unlock()
+      if exists == false {
+        d.addIndexValue(baseName, value)
+      }
     }
-    d.indexLock.Unlock()
+    index.Add(id)
+    d.changed(indexName, id, true)
   }
-  index.Add(id)
-  d.changed(indexName, id, true)
 }
 
 // Sort indexes the document
@@ -267,6 +283,21 @@ func (d *Database) addDocumentSort(sortName string, id key.Type, rank int) {
   d.getOrCreateSort(sortName, -1).(indexes.DynamicSort).Set(id, rank)
 }
 
+// Tracks unique value belonging to an index
+func (d *Database) addIndexValue(baseName, value string) {
+  d.indexValueLock.Lock()
+  defer d.indexValueLock.Unlock()
+  container, exists := d.indexValues[baseName]
+  if exists == false {
+    d.indexValues[baseName] = []string{value}
+    return
+  }
+  l := len(container)
+  newContainer := make([]string, l+1)
+  copy(newContainer, container)
+  newContainer[l] = value
+  d.indexValues[baseName] = newContainer
+}
 
 // Gets the sort index, or creates it if it doesn't already exists
 func (d *Database) getOrCreateSort(sortName string, length int) indexes.Sort {
@@ -286,13 +317,18 @@ func (d *Database) getOrCreateSort(sortName string, length int) indexes.Sort {
 }
 
 // Unindexes the document
-func (d *Database) removeDocumentIndex(indexName string, id key.Type) {
-  d.indexLock.RLock()
-  index, exists := d.indexes[indexName]
-  d.indexLock.RUnlock()
-  if exists == false { return }
-  index.Remove(id)
-  d.changed(indexName, id, false)
+func (d *Database) removeDocumentIndex(baseName string, values []string, id key.Type) {
+  for _, value := range values {
+    indexName := baseName + "$" + value
+    d.indexLock.RLock()
+    index, exists := d.indexes[indexName]
+    d.indexLock.RUnlock()
+    if exists == false { return }
+    if index.Remove(id) == 0 {
+      d.removeIndexValue(baseName, value)
+    }
+    d.changed(indexName, id, false)
+  }
 }
 
 // Removes the sort indexes for the document
@@ -302,6 +338,22 @@ func (d *Database) removeDocumentSort(sortName string, id key.Type) {
   d.sortLock.RUnlock()
   if exists == false { return }
   sort.(indexes.DynamicSort).Remove(id)
+}
+
+// Removes unique value belonging to an index
+func (d *Database) removeIndexValue(baseName, value string) {
+  d.indexValueLock.Lock()
+  defer d.indexValueLock.Unlock()
+  if container, exists := d.indexValues[baseName]; exists {
+    newContainer := make([]string, len(container)-1)
+    i := 0
+    for _, v := range container {
+      if v == value { continue }
+      newContainer[i] = v
+      i++
+    }
+    d.indexValues[baseName] = newContainer
+  }
 }
 
 // Adds the document to the bucket

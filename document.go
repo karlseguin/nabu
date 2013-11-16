@@ -22,13 +22,13 @@ type Document interface {
 type Meta struct {
   id key.Type
   sorts map[string]int
-  indexes map[string]struct{}
+  indexes map[string][]string
 }
 
 func newMeta() *Meta {
   return &Meta{
     sorts: make(map[string]int),
-    indexes: make(map[string]struct{}),
+    indexes: make(map[string][]string),
   }
 }
 
@@ -39,8 +39,12 @@ func (m *Meta) Id(id key.Type) *Meta {
 }
 
 // A document's index and value. Can be called multiple times
-func (m *Meta) Index(index, value string) *Meta {
-  m.indexes[index + "$" + value] = struct{}{}
+func (m *Meta) Index(indexName, value string) *Meta {
+  index, exists := m.indexes[indexName]
+  if exists == false {
+    index = make([]string, 0, 1)
+  }
+  m.indexes[indexName] = append(index, value)
   return m
 }
 
