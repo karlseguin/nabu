@@ -197,6 +197,25 @@ func (d *Database) Distinct(indexName string) []string {
   return d.indexValues[indexName]
 }
 
+// Returns the distinct values in an index include the number
+// of documents
+func (d *Database) DistinctCount(indexName string) map[string]int {
+  d.indexValueLock.RLock()
+  values := d.indexValues[indexName]
+  d.indexValueLock.RUnlock()
+
+  results := make(map[string]int, len(values))
+  d.indexLock.RLock()
+  defer d.indexLock.RUnlock()
+  for _, value := range values {
+    fullName := indexName + "$" + value
+    if index, ok := d.indexes[fullName]; ok {
+      results[value] = index.Len()
+    }
+  }
+  return results
+}
+
 // Closes the database
 func (d *Database) Close() error {
   derr := d.dStorage.Close()

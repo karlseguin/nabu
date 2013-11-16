@@ -44,6 +44,13 @@ func (i *Index) Contains(id key.Type) bool {
   return exists
 }
 
+// Number of documents in the index
+func (i *Index) Len() int {
+  i.RLock()
+  defer i.RUnlock()
+  return len(i.Ids)
+}
+
 // An array of indexes
 type Indexes []*Index
 
