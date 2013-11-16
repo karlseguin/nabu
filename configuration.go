@@ -1,10 +1,11 @@
 package nabu
 
+import (
+  "time"
+)
+
 // Configuration option for a Database. Exposes as a fluent-interface
 // which begins by calling nabu.Configure()
-
-// The mandatory factory and DbPath are the only fields likely worth
-// changing
 type Configuration struct {
   maxLimit int
   maxTotal int
@@ -19,6 +20,7 @@ type Configuration struct {
   maxIndexesPerQuery int
   sortedResultPoolSize int
   unsortedResultPoolSize int
+  maxCacheStaleness time.Duration
 }
 
 // Begins the configuration process. The mandatory factory deserializes
@@ -39,6 +41,7 @@ func Configure(factory Factory) *Configuration {
     maxIndexesPerQuery: 10,
     sortedResultPoolSize: 512,
     unsortedResultPoolSize: 512,
+    maxCacheStaleness: time.Minute * 10,
   }
 }
 
@@ -116,5 +119,11 @@ func (c *Configuration) CacheWorkers(workers int) *Configuration {
 // Instructs the database to not load data from disk on startup
 func (c *Configuration) SkipLoad() *Configuration {
   c.skipLoad = true
+  return c
+}
+
+// Instructs the database to not load data from disk on startup
+func (c *Configuration) MaxCacheStaleness(duration time.Duration) *Configuration {
+  c.maxCacheStaleness = duration
   return c
 }

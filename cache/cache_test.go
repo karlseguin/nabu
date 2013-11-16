@@ -9,7 +9,7 @@ import (
 
 func TestCacheHandelsMiss(t *testing.T) {
   spec := gspec.New(t)
-  cache := New(newFetcher(), 0)
+  cache := New(newFetcher(), 0, 10)
   indexes, exists := cache.Get([]string{"a", "b"})
   spec.Expect(exists).ToEqual(false)
   spec.Expect(indexes).ToBeNil()
@@ -17,7 +17,7 @@ func TestCacheHandelsMiss(t *testing.T) {
 
 func TestCacheQueuesANewItem(t *testing.T) {
   spec := gspec.New(t)
-  cache := New(newFetcher(), 0)
+  cache := New(newFetcher(), 0, 10)
   cache.Get([]string{"a", "b"})
   item := <- cache.newQueue
   spec.Expect(len(item.sources)).ToEqual(2)
@@ -27,7 +27,7 @@ func TestCacheQueuesANewItem(t *testing.T) {
 
 func TestCacheReturnsACachedItem(t *testing.T) {
   spec := gspec.New(t)
-  cache := New(newFetcher(), 0)
+  cache := New(newFetcher(), 0, 10)
   cache.Get([]string{"a", "b"})
   item := <- cache.newQueue
   item.promoted = time.Now()

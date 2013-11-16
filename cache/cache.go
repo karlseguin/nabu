@@ -1,8 +1,6 @@
-// TODO (karl): make cache staleness duration configurable
-
 // Nabu's query cache. Updates to documents incrementally
 // updates cached results. The cache's growth is unbound. However,
-// cached indexes which have not been used for 10 minutes will
+// cached indexes which have not been used for maxCacheStaleness will
 // be cleaned up
 package cache
 
@@ -34,7 +32,7 @@ type Cache struct {
 }
 
 // Creates a new cache
-func New(fetcher IndexFetcher, workerCount int) *Cache {
+func New(fetcher IndexFetcher, workerCount int, maxStaleness time.Duration) *Cache {
   c := &Cache {
     lru: list.New(),
     fetcher: fetcher,
@@ -45,7 +43,7 @@ func New(fetcher IndexFetcher, workerCount int) *Cache {
     buckets: make(map[string]*ChangeBucket),
   }
   for i := 0; i < workerCount; i++ { go c.workers() }
-  if workerCount > 0  { go c.maintenance() }
+  if workerCount > 0  { go c.maintenance(maxStaleness) }
   return c
 }
 
@@ -150,7 +148,8 @@ func (c *Cache) applyChange(change *Change) {
 
 // Promote recently used cache items. At every 50 promotions,
 // see if any stale cached index should be removed
-func (c *Cache) maintenance() {
+func (c *Cache) maintenance(maxStaleness time.Duration) {
+  maxStaleness *= -1
   i := 0
   for {
     item := <- c.promotables
@@ -160,7 +159,7 @@ func (c *Cache) maintenance() {
       item.element = c.lru.PushFront(item)
     }
     if i == 50 { //arbitrary
-      c.gc()
+      c.gc(maxStaleness)
       i = 0
     }
   }
@@ -170,8 +169,8 @@ func (c *Cache) maintenance() {
 // we can immediately break out once we've found a non-stale index.
 // Also, to prevent this from blocking, we limit how many stale indexes
 // we can clean up in a single pass
-func (c *Cache) gc() {
-  stale := time.Now().Add(time.Minute * -10)
+func (c *Cache) gc(maxStaleness time.Duration) {
+  stale := time.Now().Add(maxStaleness)
   for i := 0; i < 100; i++ {
     element := c.lru.Back()
     if element == nil { return }

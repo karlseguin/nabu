@@ -76,7 +76,7 @@ func New(c *Configuration) *Database {
     sortedResults: make(chan *SortedResult, c.sortedResultPoolSize),
     unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
   }
-  db.cache = cache.New(db, db.cacheWorkers)
+  db.cache = cache.New(db, db.cacheWorkers, db.maxCacheStaleness)
   for i := 0; i < int(c.bucketCount); i++ {
     db.buckets[i] = &Bucket{lookup: make(map[key.Type]Document),}
   }
