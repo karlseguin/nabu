@@ -14,6 +14,7 @@ type StaticRankSort struct {
   ids []key.Type
   paddedLength int
   lock sync.RWMutex
+  modifyLock sync.Mutex
   lookup map[key.Type]int
 }
 
@@ -34,6 +35,8 @@ func (s *StaticRankSort) CanRank() bool {
 // Bulk load ids into the index. This replaces any existing
 // values. The order is implied from the array order
 func (s *StaticRankSort) Load(ids []key.Type) {
+  s.modifyLock.Lock()
+  defer s.modifyLock.Unlock()
   length := len(ids)+2
   padded := make([]key.Type, length)
   lookup := make(map[key.Type]int, length)
@@ -62,29 +65,43 @@ func (s *StaticRankSort) Rank(id key.Type) (int, bool) {
 
 // Append an id
 func (s *StaticRankSort) Append(id key.Type) {
-  s.lock.Lock()
-  defer s.lock.Unlock()
-  l := s.paddedLength
-  s.modify(id, 0, l, l-1, s.lookup[s.ids[l-2]]+1)
+  s.modify(id, 0, -1, -1)
 }
 
 // Prepend an id
 func (s *StaticRankSort) Prepend(id key.Type) {
-  s.lock.Lock()
-  defer s.lock.Unlock()
-  s.modify(id, 1, 0, 1, s.lookup[s.ids[1]]-1)
+  s.modify(id, 1, 0, 1)
 }
 
-func (s *StaticRankSort) modify(id key.Type, offset, newNull, newIndex, newRank int) {
+func (s *StaticRankSort) modify(id key.Type, offset, newNull, newIndex int) {
+  s.modifyLock.Lock()
+  defer s.modifyLock.Unlock()
+
+  s.lock.RLock()
   l := s.paddedLength
   padded := make([]key.Type, l+1)
   copy(padded[offset:], s.ids)
+  var newRank  int
+  if newNull == -1 {
+    newRank = s.lookup[s.ids[l-2]] + 1
+  } else {
+    newRank = s.lookup[s.ids[1]] - 1
+  }
+  s.lock.RUnlock()
+
+  if newNull == -1 {
+    newNull = l
+    newIndex = l - 1
+  }
   padded[newNull] = key.NULL
   padded[newIndex] = id
+
+  s.lock.Lock()
   s.paddedLength++
   s.length++
   s.ids = padded
   s.lookup[id] = newRank
+  s.lock.Unlock()
 }
 
 // Returns a forward iterator

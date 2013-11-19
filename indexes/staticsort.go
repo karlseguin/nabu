@@ -13,6 +13,7 @@ type StaticSort struct {
   ids []key.Type
   paddedLength int
   lock sync.RWMutex
+  modifyLock sync.Mutex
 }
 
 // Get the number of documents indexed
@@ -30,6 +31,9 @@ func (s *StaticSort) CanRank() bool {
 // Bulk load ids into the index. This replaces any existing
 // values. The order is implied from the array order
 func (s *StaticSort) Load(ids []key.Type) {
+  s.modifyLock.Lock()
+  defer s.modifyLock.Unlock()
+
   length := len(ids)+2
   padded := make([]key.Type, length)
   padded[0] = key.NULL
@@ -50,28 +54,36 @@ func (s *StaticSort) Rank(id key.Type) (int, bool) {
 
 // Append an id
 func (s *StaticSort) Append(id key.Type) {
-  s.lock.Lock()
-  defer s.lock.Unlock()
-  l := s.paddedLength
-  s.modify(id, 0, l, l-1)
+  s.modify(id, 0, -1, -1)
 }
 
 // Prepend an id
 func (s *StaticSort) Prepend(id key.Type) {
-  s.lock.Lock()
-  defer s.lock.Unlock()
   s.modify(id, 1, 0, 1)
 }
 
 func (s *StaticSort) modify(id key.Type, offset, newNull, newIndex int) {
+  s.modifyLock.Lock()
+  defer s.modifyLock.Unlock()
+
+  s.lock.RLock()
   l := s.paddedLength
   padded := make([]key.Type, l+1)
   copy(padded[offset:], s.ids)
+  s.lock.RUnlock()
+
+  if newNull == -1 {
+    newNull = l
+    newIndex = l - 1
+  }
   padded[newNull] = key.NULL
   padded[newIndex] = id
+
+  s.lock.Lock()
   s.paddedLength++
   s.length++
   s.ids = padded
+  s.lock.Unlock()
 }
 
 // Returns a forward iterator
