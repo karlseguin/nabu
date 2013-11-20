@@ -77,7 +77,6 @@ func (s *StaticRankSort) modify(id key.Type, offset, newNull, newIndex int) {
   s.modifyLock.Lock()
   defer s.modifyLock.Unlock()
 
-  s.lock.RLock()
   l := s.paddedLength
   padded := make([]key.Type, l+1)
   copy(padded[offset:], s.ids)
@@ -87,7 +86,6 @@ func (s *StaticRankSort) modify(id key.Type, offset, newNull, newIndex int) {
   } else {
     newRank = s.lookup[s.ids[1]] - 1
   }
-  s.lock.RUnlock()
 
   if newNull == -1 {
     newNull = l
