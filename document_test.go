@@ -12,9 +12,8 @@ func TestMetaCanBeSet(t *testing.T) {
 	meta.Index("children", "ghanima")
 	meta.Index("children", "leto")
 	spec.Expect(string(meta.id)).ToEqual("paul")
-	spec.Expect(len(meta.indexes)).ToEqual(2)
-	_, exists := meta.indexes["children$ghanima"]
-	spec.Expect(exists).ToEqual(true)
-	_, exists = meta.indexes["children$leto"]
-	spec.Expect(exists).ToEqual(true)
+	spec.Expect(len(meta.indexes)).ToEqual(1)
+	values, _ := meta.indexes["children"]
+	spec.Expect(values[0]).ToEqual("ghanima")
+	spec.Expect(values[1]).ToEqual("leto")
 }

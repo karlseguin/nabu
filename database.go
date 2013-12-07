@@ -263,16 +263,14 @@ func (d *Database) insert(doc Document, meta *Meta, bucket int) {
 func (d *Database) update(doc Document, meta *Meta, old *Meta, bucket int) {
 	id := meta.id
 
-	for baseName, values := range meta.indexes {
-		if _, exists := old.indexes[baseName]; exists {
-			delete(old.indexes, baseName)
-		} else {
-			d.addDocumentIndex(baseName, values, id)
-		}
-	}
 	for baseName, values := range old.indexes {
 		d.removeDocumentIndex(baseName, values, id)
 	}
+
+	for baseName, values := range meta.indexes {
+		d.addDocumentIndex(baseName, values, id)
+	}
+
 	d.addDocument(doc, id, bucket)
 }
 
