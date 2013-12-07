@@ -18,49 +18,49 @@ func TestStaticSortLength(t *testing.T) {
 func TestStaticSortForwardIteration(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(0), "a", "b", "c")
+	assertIterator(t, s.Forwards(), "a", "b", "c")
 }
 
 func TestStaticSortBackwardIteration(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(0), "c", "b", "a")
+	assertIterator(t, s.Backwards(), "c", "b", "a")
 }
 
 func TestStaticSortForwardIterationWithOffset(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(1), "b", "c")
+	assertIterator(t, s.Forwards().Offset(1), "b", "c")
 }
 
 func TestStaticSortBackwardIterationWithOffset(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(1), "b", "a")
+	assertIterator(t, s.Backwards().Offset(1), "b", "a")
 }
 
 func TestStaticSortForwardIterationWithOffsetAtRange(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(3), "")
+	assertIterator(t, s.Forwards().Offset(3), "")
 }
 
 func TestStaticSortBackwardIterationWithOffsetAtRange(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(3), "")
+	assertIterator(t, s.Backwards().Offset(3), "")
 }
 
 func TestStaticSortForwardIterationWithOffsetOutsideOfRange(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(4), "")
+	assertIterator(t, s.Forwards().Offset(4), "")
 }
 
 func TestStaticSortBackwardIterationWithOffsetOutsideOfRange(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(4), "")
+	assertIterator(t, s.Backwards().Offset(4), "")
 }
 
 func TestStaticSortCanAppendAValue(t *testing.T) {
@@ -68,7 +68,7 @@ func TestStaticSortCanAppendAValue(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
 	s.Append("d")
-	assertIterator(t, s.Forwards(0), "a", "b", "c", "d")
+	assertIterator(t, s.Forwards(), "a", "b", "c", "d")
 	spec.Expect(s.Len()).ToEqual(4)
 }
 
@@ -77,7 +77,7 @@ func TestStaticSortCanPrependAValue(t *testing.T) {
 	s := &StaticSort{}
 	s.Load([]key.Type{"a", "b", "c"})
 	s.Prepend("z")
-	assertIterator(t, s.Forwards(0), "z", "a", "b", "c")
+	assertIterator(t, s.Forwards(), "z", "a", "b", "c")
 	spec.Expect(s.Len()).ToEqual(4)
 }
 

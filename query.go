@@ -18,6 +18,9 @@ type Query struct {
 	indexCount   int
 	includeTotal bool
 	sort         indexes.Sort
+	from         int
+	to           int
+	ranged       bool
 	indexNames   []string
 	indexes      indexes.Indexes
 }
@@ -153,10 +156,14 @@ func (q *Query) findWithNoIndexes() Result {
 	result := <-q.db.sortedResults
 	var iterator indexes.Iterator
 	if q.desc {
-		iterator = q.sort.Backwards(q.offset)
+		iterator = q.sort.Backwards()
 	} else {
-		iterator = q.sort.Forwards(q.offset)
+		iterator = q.sort.Forwards()
 	}
+	if q.ranged {
+		iterator.Range(q.from, q.to)
+	}
+	iterator.Offset(q.offset)
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		if result.add(id) == limit {
@@ -187,7 +194,7 @@ func (q *Query) findByIndex(indexes indexes.Indexes) Result {
 				goto nomatch
 			}
 		}
-		if rank, exists := q.sort.Rank(id); exists {
+		if rank, exists := q.sort.Rank(id); exists && (!q.ranged || (rank >= q.from && rank <= q.to)) {
 			result.add(id, rank)
 		}
 	nomatch:
@@ -204,9 +211,12 @@ func (q *Query) findBySort(idx indexes.Indexes) Result {
 
 	result := <-q.db.sortedResults
 	if q.desc {
-		iterator = q.sort.Backwards(0)
+		iterator = q.sort.Backwards()
 	} else {
-		iterator = q.sort.Forwards(0)
+		iterator = q.sort.Forwards()
+	}
+	if q.ranged {
+		iterator.Range(q.from, q.to)
 	}
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
@@ -241,6 +251,7 @@ func (q *Query) reset() {
 	q.cache = true
 	q.desc = false
 	q.indexCount = 0
+	q.ranged = false
 	q.includeTotal = false
 	q.limit = q.db.defaultLimit
 	q.upto = q.db.defaultLimit + 1

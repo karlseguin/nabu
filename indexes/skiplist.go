@@ -203,48 +203,38 @@ func (s *Skiplist) Rank(id key.Type) (int, bool) {
 }
 
 // Generates a forward iterator (from low rank to high)
-func (s *Skiplist) Forwards(offset int) Iterator {
-	if offset > s.Len() {
-		return emptyIterator
-	}
+func (s *Skiplist) Forwards() Iterator {
 	s.lock.RLock()
-
-	node := s.head.next[0]
-	for i := 0; i < offset; i++ {
-		node = node.next[0]
-	}
 	return &SkipListForwardIterator{
-		node: node,
-		lock: &s.lock,
+		node: s.head.next[0],
+		list: s,
+		to:   s.tail.prev.rank,
 	}
 }
 
 // Generates a backward iterator (from high rank to low)
-func (s *Skiplist) Backwards(offset int) Iterator {
-	if offset > s.Len() {
-		return emptyIterator
-	}
+func (s *Skiplist) Backwards() Iterator {
 	s.lock.RLock()
-
-	node := s.tail.prev
-	for i := 0; i < offset; i++ {
-		node = node.prev
-	}
 	return &SkipListBackwardsIterator{
-		node: node,
-		lock: &s.lock,
+		node: s.tail.prev,
+		list: s,
+		from: s.head.next[0].rank,
 	}
 }
 
 // Forward skip list iterator
 type SkipListForwardIterator struct {
-	lock *sync.RWMutex
+	list *Skiplist
 	node *SkiplistNode
+	to   int
 }
 
 // Move to the next (higher ranked) item
 func (i *SkipListForwardIterator) Next() key.Type {
 	i.node = i.node.next[0]
+	if i.node.rank > i.to {
+		i.node = i.list.tail
+	}
 	return i.Current()
 }
 
@@ -253,20 +243,56 @@ func (i *SkipListForwardIterator) Current() key.Type {
 	return i.node.id
 }
 
+// Sets the iterator's offset
+func (i *SkipListForwardIterator) Offset(offset int) Iterator {
+	for j := 0; j < offset; j++ {
+		i.node = i.node.next[0]
+		if i.node.id == key.NULL {
+			return i
+		}
+	}
+	return i
+}
+
+// Specified the range of values to interate over
+func (i *SkipListForwardIterator) Range(from, to int) Iterator {
+	// from is already lower than our lowest rank
+	if from <= i.node.rank {
+		return i
+	}
+	s := i.list
+	node := s.head
+	for i := s.levels; i >= 0; i-- {
+		for ; node.next[i] != nil; node = node.next[i] {
+			next := node.next[i]
+			if next.rank > from {
+				break
+			}
+		}
+	}
+	i.node = node
+	i.to = to
+	return i
+}
+
 // Release the iterator
 func (i *SkipListForwardIterator) Close() {
-	i.lock.RUnlock()
+	i.list.lock.RUnlock()
 }
 
 // Backward skip list iterator
 type SkipListBackwardsIterator struct {
-	lock *sync.RWMutex
+	list *Skiplist
 	node *SkiplistNode
+	from int
 }
 
 // Move to the next (lower ranked) item
 func (i *SkipListBackwardsIterator) Next() key.Type {
 	i.node = i.node.prev
+	if i.node.rank < i.from {
+		i.node = i.list.head
+	}
 	return i.Current()
 }
 
@@ -276,6 +302,39 @@ func (i *SkipListBackwardsIterator) Current() key.Type {
 }
 
 // Release the iterator
+func (i *SkipListBackwardsIterator) Offset(offset int) Iterator {
+	for j := 0; j < offset; j++ {
+		i.node = i.node.prev
+		if i.node.id == key.NULL {
+			return i
+		}
+	}
+	return i
+}
+
+// Specified the range of values to interate over
+func (i *SkipListBackwardsIterator) Range(from, to int) Iterator {
+	// to is already greater than our lowest rank
+	if to >= i.node.rank {
+		return i
+	}
+
+	s := i.list
+	node := s.head
+	for i := s.levels; i >= 0; i-- {
+		for ; node.next[i] != nil; node = node.next[i] {
+			next := node.next[i]
+			if next.rank > to {
+				break
+			}
+		}
+	}
+	i.node = node
+	i.from = from
+	return i
+}
+
+// Release the iterator
 func (i *SkipListBackwardsIterator) Close() {
-	i.lock.RUnlock()
+	i.list.lock.RUnlock()
 }

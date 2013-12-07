@@ -85,29 +85,22 @@ func (s *StaticSort) modify(id key.Type, offset, newNull, newIndex int) {
 }
 
 // Returns a forward iterator
-func (s *StaticSort) Forwards(offset int) Iterator {
-	if offset > s.Len() {
-		return emptyIterator
-	}
+func (s *StaticSort) Forwards() Iterator {
 	s.lock.RLock()
 	return &StaticSortForwardIterator{
 		lock:     &s.lock,
-		position: offset + 1,
+		position: 1,
 		ids:      s.ids[0:s.paddedLength],
 	}
 }
 
 // Returns a backward iterator
-func (s *StaticSort) Backwards(offset int) Iterator {
-	if offset > s.Len() {
-		return emptyIterator
-	}
-
+func (s *StaticSort) Backwards() Iterator {
 	s.lock.RLock()
 	return &StaticSortBackwardsIterator{
 		lock:     &s.lock,
 		ids:      s.ids[0:s.paddedLength],
-		position: s.length - offset,
+		position: s.length,
 	}
 }
 
@@ -127,6 +120,22 @@ func (i *StaticSortForwardIterator) Next() key.Type {
 // Gets the value
 func (i *StaticSortForwardIterator) Current() key.Type {
 	return i.ids[i.position]
+}
+
+// Sets the iterators offset
+func (i *StaticSortForwardIterator) Offset(offset int) Iterator {
+	// consider the 2 padding values
+	if offset > len(i.ids)-2 {
+		i.position = 0 //the padded head will break the loop
+	} else {
+		i.position += offset
+	}
+	return i
+}
+
+// Panics. Ranged queries aren't supported on static sort indexes
+func (i *StaticSortForwardIterator) Range(from, to int) Iterator {
+	panic("Cannot have a ranged query on a static index")
 }
 
 // Releases the iterator
@@ -150,6 +159,22 @@ func (i *StaticSortBackwardsIterator) Next() key.Type {
 // Gets the value
 func (i *StaticSortBackwardsIterator) Current() key.Type {
 	return i.ids[i.position]
+}
+
+// Sets the iterators offset
+func (i *StaticSortBackwardsIterator) Offset(offset int) Iterator {
+	// consider the 2 padding values
+	if offset >= len(i.ids)-2 {
+		i.position = 0 //the padded head will break the loop
+	} else {
+		i.position -= offset
+	}
+	return i
+}
+
+// Panics. Ranged queries aren't supported on static sort indexes
+func (i *StaticSortBackwardsIterator) Range(from, to int) Iterator {
+	panic("Cannot have a ranged query on a static index")
 }
 
 // Releases the iterator

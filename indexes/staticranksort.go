@@ -102,28 +102,21 @@ func (s *StaticRankSort) modify(id key.Type, offset, newNull, newIndex int) {
 }
 
 // Returns a forward iterator
-func (s *StaticRankSort) Forwards(offset int) Iterator {
-	if offset > s.Len() {
-		return emptyIterator
-	}
+func (s *StaticRankSort) Forwards() Iterator {
 	s.lock.RLock()
 	return &StaticSortForwardIterator{
 		lock:     &s.lock,
-		position: offset + 1,
+		position: 1,
 		ids:      s.ids[0:s.paddedLength],
 	}
 }
 
 // Returns a backward iterator
-func (s *StaticRankSort) Backwards(offset int) Iterator {
-	if offset > s.Len() {
-		return emptyIterator
-	}
-
+func (s *StaticRankSort) Backwards() Iterator {
 	s.lock.RLock()
 	return &StaticSortBackwardsIterator{
 		lock:     &s.lock,
 		ids:      s.ids[0:s.paddedLength],
-		position: s.length - offset,
+		position: s.length,
 	}
 }

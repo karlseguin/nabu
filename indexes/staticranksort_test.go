@@ -18,49 +18,49 @@ func TestStaticRankSortLength(t *testing.T) {
 func TestStaticRankSortForwardIteration(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(0), "a", "b", "c")
+	assertIterator(t, s.Forwards(), "a", "b", "c")
 }
 
 func TestStaticRankSortBackwardIteration(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(0), "c", "b", "a")
+	assertIterator(t, s.Backwards(), "c", "b", "a")
 }
 
 func TestStaticRankSortForwardIterationWithOffset(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(1), "b", "c")
+	assertIterator(t, s.Forwards().Offset(1), "b", "c")
 }
 
 func TestStaticRankSortBackwardIterationWithOffset(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(1), "b", "a")
+	assertIterator(t, s.Backwards().Offset(1), "b", "a")
 }
 
 func TestStaticRankSortForwardIterationWithOffsetAtRange(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(3), "")
+	assertIterator(t, s.Forwards().Offset(3), "")
 }
 
 func TestStaticRankSortBackwardIterationWithOffsetAtRange(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(3), "")
+	assertIterator(t, s.Backwards().Offset(3), "")
 }
 
 func TestStaticRankSortForwardIterationWithOffsetOutsideOfRange(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(4), "")
+	assertIterator(t, s.Forwards().Offset(4), "")
 }
 
 func TestStaticRankSortBackwardIterationWithOffsetOutsideOfRange(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(4), "")
+	assertIterator(t, s.Backwards().Offset(4), "")
 }
 
 func TestStaticRankSortRankingIfMemberDoesNotExist(t *testing.T) {
@@ -84,7 +84,7 @@ func TestStaticRankSortCanAppendAValue(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
 	s.Append("d")
-	assertIterator(t, s.Forwards(0), "a", "b", "c", "d")
+	assertIterator(t, s.Forwards(), "a", "b", "c", "d")
 	spec.Expect(s.Len()).ToEqual(4)
 	spec.Expect(s.Rank("d")).ToEqual(3)
 }
@@ -94,7 +94,7 @@ func TestStaticRankSortCanPrependAValue(t *testing.T) {
 	s := &StaticRankSort{}
 	s.Load([]key.Type{"a", "b", "c"})
 	s.Prepend("z")
-	assertIterator(t, s.Forwards(0), "z", "a", "b", "c")
+	assertIterator(t, s.Forwards(), "z", "a", "b", "c")
 	spec.Expect(s.Len()).ToEqual(4)
 	spec.Expect(s.Rank("z")).ToEqual(-1)
 }

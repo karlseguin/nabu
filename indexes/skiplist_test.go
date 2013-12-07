@@ -16,49 +16,85 @@ func TestSkiplistLength(t *testing.T) {
 func TestSkiplistForwardIteration(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(0), "a", "b", "c")
+	assertIterator(t, s.Forwards(), "a", "b", "c")
 }
 
 func TestSkiplistBackwardIteration(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(0), "c", "b", "a")
+	assertIterator(t, s.Backwards(), "c", "b", "a")
 }
 
 func TestSkiplistForwardIterationWithOffset(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(1), "b", "c")
+	assertIterator(t, s.Forwards().Offset(1), "b", "c")
 }
 
 func TestSkiplistBackwardIterationWithOffset(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(1), "b", "a")
+	assertIterator(t, s.Backwards().Offset(1), "b", "a")
 }
 
 func TestSkiplistForwardIterationWithOffsetAtRange(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(3), "")
+	assertIterator(t, s.Forwards().Offset(3), "")
 }
 
 func TestSkiplistBackwardIterationWithOffsetAtRange(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(3), "")
+	assertIterator(t, s.Backwards().Offset(3), "")
 }
 
 func TestSkiplistForwardIterationWithOffsetOutsideOfRange(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Forwards(4), "")
+	assertIterator(t, s.Forwards().Offset(4), "")
 }
 
 func TestSkiplistBackwardIterationWithOffsetOutsideOfRange(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards(4), "")
+	assertIterator(t, s.Backwards().Offset(4), "")
+}
+
+func TestSkiplistForwardIterationWithRange(t *testing.T) {
+	s := newSkiplist()
+	s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
+	assertIterator(t, s.Forwards().Range(1, 3), "b", "c", "d")
+}
+
+func TestSkiplistForwardIterationWithOffsetAndRange(t *testing.T) {
+	s := newSkiplist()
+	s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
+	assertIterator(t, s.Forwards().Range(1, 3).Offset(1), "c", "d")
+}
+
+func TestSkiplistForwardIterationWithRangeOutsideBounds(t *testing.T) {
+	s := newSkiplist()
+	s.Load([]key.Type{"a", "b", "c"})
+	assertIterator(t, s.Forwards().Range(-10, 10).Offset(1), "b", "c")
+}
+
+func TestSkiplistBackwardIterationWithRange(t *testing.T) {
+	s := newSkiplist()
+	s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
+	assertIterator(t, s.Backwards().Range(1, 3), "d", "c", "b")
+}
+
+func TestSkiplistBackwardIterationWithOffsetAndRange(t *testing.T) {
+	s := newSkiplist()
+	s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
+	assertIterator(t, s.Backwards().Range(1, 3).Offset(1), "c", "b")
+}
+
+func TestSkiplistBackwardIterationWithRangeOutsideBounds(t *testing.T) {
+	s := newSkiplist()
+	s.Load([]key.Type{"a", "b", "c"})
+	assertIterator(t, s.Backwards().Range(-10, 10).Offset(1), "b", "a")
 }
 
 func TestSkiplistRankingIfMemberDoesNotExist(t *testing.T) {
@@ -81,7 +117,7 @@ func TestSkipListAppendOnEmpty(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Append("x")
-	assertIterator(t, s.Forwards(0), "x")
+	assertIterator(t, s.Forwards(), "x")
 	spec.Expect(s.Rank("x")).ToEqual(1)
 }
 
@@ -89,7 +125,7 @@ func TestSkipListPrependOnEmpty(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Prepend("x")
-	assertIterator(t, s.Forwards(0), "x")
+	assertIterator(t, s.Forwards(), "x")
 	spec.Expect(s.Rank("x")).ToEqual(-1)
 }
 
@@ -99,7 +135,7 @@ func TestSkipListAppendToList(t *testing.T) {
 	s.Load([]key.Type{"a", "b"})
 	s.Set("c", 33)
 	s.Append("x")
-	assertIterator(t, s.Forwards(0), "a", "b", "c", "x")
+	assertIterator(t, s.Forwards(), "a", "b", "c", "x")
 	spec.Expect(s.Rank("x")).ToEqual(34)
 }
 
@@ -109,7 +145,7 @@ func TestSkipListPrependToList(t *testing.T) {
 	s.Load([]key.Type{"a", "b"})
 	s.Set("c", -333)
 	s.Prepend("x")
-	assertIterator(t, s.Forwards(0), "x", "c", "a", "b")
+	assertIterator(t, s.Forwards(), "x", "c", "a", "b")
 	spec.Expect(s.Rank("x")).ToEqual(-334)
 }
 
@@ -119,7 +155,7 @@ func TestSkipListReplace(t *testing.T) {
 	s.Set("a", 1)
 	s.Set("b", 2)
 	s.Set("a", 1)
-	assertIterator(t, s.Forwards(0), "a", "b")
+	assertIterator(t, s.Forwards(), "a", "b")
 	spec.Expect(s.Rank("a")).ToEqual(1)
 }
 
@@ -129,20 +165,20 @@ func TestSkipListSetAndRemoveItems(t *testing.T) {
 	s.Set("a", 1)
 	s.Set("b", 2)
 	s.Set("c", 3)
-	assertIterator(t, s.Forwards(0), "a", "b", "c")
+	assertIterator(t, s.Forwards(), "a", "b", "c")
 
 	s.Remove("d")
-	assertIterator(t, s.Forwards(0), "a", "b", "c")
+	assertIterator(t, s.Forwards(), "a", "b", "c")
 
 	s.Remove("b")
-	assertIterator(t, s.Forwards(0), "a", "c")
+	assertIterator(t, s.Forwards(), "a", "c")
 
 	s.Remove("c")
-	assertIterator(t, s.Forwards(0), "a")
+	assertIterator(t, s.Forwards(), "a")
 
 	s.Set("b", 0)
-	assertIterator(t, s.Forwards(0), "b", "a")
+	assertIterator(t, s.Forwards(), "b", "a")
 
 	s.Remove("a")
-	assertIterator(t, s.Forwards(0), "b")
+	assertIterator(t, s.Forwards(), "b")
 }

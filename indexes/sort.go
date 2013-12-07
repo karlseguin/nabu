@@ -10,8 +10,8 @@ type Sort interface {
 	CanRank() bool
 	Load(ids []key.Type)
 	Rank(id key.Type) (int, bool)
-	Forwards(offset int) Iterator
-	Backwards(offset int) Iterator
+	Forwards() Iterator
+	Backwards() Iterator
 	Append(id key.Type)
 	Prepend(id key.Type)
 }
@@ -30,6 +30,8 @@ type DynamicSort interface {
 type Iterator interface {
 	Next() key.Type
 	Current() key.Type
+	Offset(offset int) Iterator
+	Range(from, to int) Iterator
 	Close()
 }
 
@@ -48,12 +50,3 @@ func NewSort(length, maxUnsortedSize int) Sort {
 	}
 	return &StaticRankSort{}
 }
-
-// An iterator which returns no values
-type EmptyIterator struct{}
-
-func (i *EmptyIterator) Next() key.Type    { return key.NULL }
-func (i *EmptyIterator) Current() key.Type { return key.NULL }
-func (i *EmptyIterator) Close()            {}
-
-var emptyIterator = &EmptyIterator{}
