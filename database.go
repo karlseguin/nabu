@@ -263,12 +263,31 @@ func (d *Database) insert(doc Document, meta *Meta, bucket int) {
 func (d *Database) update(doc Document, meta *Meta, old *Meta, bucket int) {
 	id := meta.id
 
-	for baseName, values := range old.indexes {
-		d.removeDocumentIndex(baseName, values, id)
+	for baseName, values := range meta.indexes {
+		length := len(values)
+
+		//do a diff of the two values
+		if oldValues, exists := old.indexes[baseName]; exists {
+			length = 0
+			for _, value := range values {
+				var removed bool
+				if oldValues, removed = removeValue(oldValues, value); !removed {
+					values[length] = value
+					length++
+				}
+			}
+			if len(oldValues) == 0 {
+				delete(old.indexes, baseName)
+			}
+		}
+
+		if length > 0 {
+			d.addDocumentIndex(baseName, values[0:length], id)
+		}
 	}
 
-	for baseName, values := range meta.indexes {
-		d.addDocumentIndex(baseName, values, id)
+	for baseName, values := range old.indexes {
+		d.removeDocumentIndex(baseName, values, id)
 	}
 
 	d.addDocument(doc, id, bucket)
@@ -457,4 +476,17 @@ func deserializeIndex(raw []byte) []key.Type {
 		panic(err)
 	}
 	return index
+}
+
+func removeValue(values []string, target string) ([]string, bool) {
+	length := len(values)
+	for index, value := range values {
+		if target == value {
+			for i := index+1; i < length; i++ {
+				values[i-1] = values[i]
+			}
+			return values[0:length-1], true
+		}
+	}
+	return values, false
 }
