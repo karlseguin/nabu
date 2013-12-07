@@ -1,13 +1,13 @@
 package nabu
 
 import (
-  "sync"
-  "github.com/karlseguin/nabu/key"
+	"github.com/karlseguin/nabu/key"
+	"sync"
 )
 
 // Documents are sharded across multiple buckets to increase
 // concurrency
 type Bucket struct {
-  sync.RWMutex
-  lookup map[key.Type]Document
+	sync.RWMutex
+	lookup map[key.Type]Document
 }

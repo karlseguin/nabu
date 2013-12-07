@@ -1,25 +1,25 @@
 package indexes
 
 import (
-  "github.com/karlseguin/nabu/key"
+	"github.com/karlseguin/nabu/key"
 )
 
 // Interface for a sorted index
 type Sort interface {
-  Len() int
-  CanRank() bool
-  Load(ids []key.Type)
-  Rank(id key.Type) (int, bool)
-  Forwards(offset int) Iterator
-  Backwards(offset int) Iterator
-  Append(id key.Type)
-  Prepend(id key.Type)
+	Len() int
+	CanRank() bool
+	Load(ids []key.Type)
+	Rank(id key.Type) (int, bool)
+	Forwards(offset int) Iterator
+	Backwards(offset int) Iterator
+	Append(id key.Type)
+	Prepend(id key.Type)
 }
 
 // Interface for a sorted index that can be dynamically updated
 type DynamicSort interface {
-  Set(id key.Type, rank int)
-  Remove(id key.Type)
+	Set(id key.Type, rank int)
+	Remove(id key.Type)
 }
 
 // Interface used to iterate over a sorted index.
@@ -28,9 +28,9 @@ type DynamicSort interface {
 //
 // Iteration returns key.NULL when done
 type Iterator interface {
-  Next() key.Type
-  Current() key.Type
-  Close()
+	Next() key.Type
+	Current() key.Type
+	Close()
 }
 
 // Creates a new sorted index. When length is -1, an index
@@ -40,20 +40,20 @@ type Iterator interface {
 // is used. The choice between the possible implementation is a balance
 // between performance, memory space and flexibility
 func NewSort(length, maxUnsortedSize int) Sort {
-  if length == -1 {
-    return newSkiplist()
-  }
-  if length < maxUnsortedSize {
-    return &StaticSort{}
-  }
-  return &StaticRankSort{}
+	if length == -1 {
+		return newSkiplist()
+	}
+	if length < maxUnsortedSize {
+		return &StaticSort{}
+	}
+	return &StaticRankSort{}
 }
 
 // An iterator which returns no values
-type EmptyIterator struct {}
+type EmptyIterator struct{}
 
-func (i *EmptyIterator) Next() key.Type { return key.NULL }
+func (i *EmptyIterator) Next() key.Type    { return key.NULL }
 func (i *EmptyIterator) Current() key.Type { return key.NULL }
-func (i *EmptyIterator) Close() {}
+func (i *EmptyIterator) Close()            {}
 
 var emptyIterator = &EmptyIterator{}
