@@ -161,24 +161,39 @@ func TestSkipListReplace(t *testing.T) {
 
 //todo expand this
 func TestSkipListSetAndRemoveItems(t *testing.T) {
+	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Set("a", 1)
 	s.Set("b", 2)
 	s.Set("c", 3)
 	assertIterator(t, s.Forwards(), "a", "b", "c")
+	spec.Expect(s.Skip(0).id).ToEqual(key.Type("a"))
+	spec.Expect(s.Skip(1).id).ToEqual(key.Type("b"))
+	spec.Expect(s.Skip(2).id).ToEqual(key.Type("c"))
+	spec.Expect(s.Skip(3)).ToBeNil()
 
 	s.Remove("d")
 	assertIterator(t, s.Forwards(), "a", "b", "c")
 
 	s.Remove("b")
 	assertIterator(t, s.Forwards(), "a", "c")
+	spec.Expect(s.Skip(0).id).ToEqual(key.Type("a"))
+	spec.Expect(s.Skip(1).id).ToEqual(key.Type("c"))
+	spec.Expect(s.Skip(2)).ToBeNil()
 
 	s.Remove("c")
 	assertIterator(t, s.Forwards(), "a")
+	spec.Expect(s.Skip(0).id).ToEqual(key.Type("a"))
+	spec.Expect(s.Skip(1)).ToBeNil()
 
 	s.Set("b", 0)
 	assertIterator(t, s.Forwards(), "b", "a")
+	spec.Expect(s.Skip(0).id).ToEqual(key.Type("b"))
+	spec.Expect(s.Skip(1).id).ToEqual(key.Type("a"))
+	spec.Expect(s.Skip(2)).ToBeNil()
 
 	s.Remove("a")
 	assertIterator(t, s.Forwards(), "b")
+	spec.Expect(s.Skip(0).id).ToEqual(key.Type("b"))
+	spec.Expect(s.Skip(1)).ToBeNil()
 }

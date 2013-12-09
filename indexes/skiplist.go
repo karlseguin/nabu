@@ -35,10 +35,11 @@ type Skiplist struct {
 }
 
 type SkiplistNode struct {
-	rank int
-	id   key.Type
-	next []*SkiplistNode
-	prev *SkiplistNode
+	rank  int
+	id    key.Type
+	next  []*SkiplistNode
+	width []int
+	prev  *SkiplistNode
 }
 
 func newSkiplist() *Skiplist {
@@ -47,8 +48,9 @@ func newSkiplist() *Skiplist {
 		next: make([]*SkiplistNode, maxLevel),
 	}
 	tail := &SkiplistNode{
-		id:   key.NULL,
-		prev: head,
+		id:    key.NULL,
+		prev:  head,
+		width: make([]int, maxLevel),
 	}
 
 	return &Skiplist{
@@ -72,9 +74,10 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 
 	level := s.getLevel()
 	node := &SkiplistNode{
-		id:   id,
-		rank: rank,
-		next: make([]*SkiplistNode, level+1),
+		id:    id,
+		rank:  rank,
+		width: make([]int, level+1),
+		next:  make([]*SkiplistNode, level+1),
 	}
 
 	current := s.head
@@ -86,7 +89,20 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 			}
 		}
 		if i > level {
+			next := current.next[i]
+			if next != nil {
+				next.width[i]++
+			}
 			continue
+		}
+		if i == 0 {
+			node.width[0] = 1
+		} else {
+			width := s.getWidth(current.next[i-1], i-1, rank)
+			for j := i; j <= level; j++ {
+				node.width[j] += width
+			}
+			node.width[i] += 1
 		}
 		node.next[i] = current.next[i]
 		current.next[i] = node
@@ -98,6 +114,12 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 	} else {
 		node.next[0].prev = node
 	}
+	for i := 1; i <= level; i++ {
+		next := node.next[i]
+		if next != nil {
+			next.width[i] -= node.width[i] - 1
+		}
+	}
 	s.lookup[id] = rank
 }
 
@@ -106,6 +128,40 @@ func (s *Skiplist) Remove(id key.Type) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.remove(id)
+}
+
+// Go to the node at the specified offset
+func (s *Skiplist) Skip(offset int) *SkiplistNode {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	skipped := -1
+	current := s.head
+	for i := s.levels; i >= 0; i-- {
+		next := current.next[i]
+
+		if next == nil {
+			continue
+		}
+
+		width := next.width[i]
+		if skipped+width > offset {
+			continue
+		}
+		current = next
+		for ; current != s.tail; current = current.next[i] {
+			skipped += current.width[i]
+			if skipped == offset {
+				return current
+			}
+
+			next := current.next[i]
+			if next == nil || next.width[i]+skipped > offset {
+				break
+			}
+		}
+	}
+	return nil
 }
 
 // Appends the id to the end of the index giving it a rank of
@@ -139,18 +195,34 @@ func (s *Skiplist) remove(id key.Type) {
 	for i := s.levels; i >= 0; i-- {
 		for ; current.next[i] != nil; current = current.next[i] {
 			next := current.next[i]
-			if next.rank > rank || next.id == id {
+			if next.id == id {
+				current.next[i] = next.next[i]
+				nn := next.next[i]
+				if nn != nil {
+					nn.width[i] += next.width[i] - 1
+				}
+				break
+			} else if next.rank > rank {
 				break
 			}
-		}
-		if current.next[i] != nil && current.next[i].id == id {
-			current.next[i] = current.next[i].next[i]
 		}
 	}
 	if current.next[0] == nil {
 		s.tail.prev = current
 	}
 	delete(s.lookup, id)
+}
+
+// Get a node's width
+func (s *Skiplist) getWidth(node *SkiplistNode, level int, rank int) int {
+	width := 0
+	for ; node != nil && node != s.tail; node = node.next[level] {
+		if node.rank > rank {
+			break
+		}
+		width += node.width[level]
+	}
+	return width
 }
 
 // Determins the level to place a new item (0-31)
