@@ -130,40 +130,6 @@ func (s *Skiplist) Remove(id key.Type) {
 	s.remove(id)
 }
 
-// Go to the node at the specified offset
-func (s *Skiplist) Skip(offset int) *SkiplistNode {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	skipped := -1
-	current := s.head
-	for i := s.levels; i >= 0; i-- {
-		next := current.next[i]
-
-		if next == nil {
-			continue
-		}
-
-		width := next.width[i]
-		if skipped+width > offset {
-			continue
-		}
-		current = next
-		for ; current != s.tail; current = current.next[i] {
-			skipped += current.width[i]
-			if skipped == offset {
-				return current
-			}
-
-			next := current.next[i]
-			if next == nil || next.width[i]+skipped > offset {
-				break
-			}
-		}
-	}
-	return nil
-}
-
 // Appends the id to the end of the index giving it a rank of
 // the current max rank + 1.
 func (s *Skiplist) Append(id key.Type) {
@@ -237,6 +203,40 @@ func (s *Skiplist) getLevel() int {
 		s.levels++
 	}
 	return s.levels
+}
+
+// Go to the node at the specified offset
+// assumes the list is already read-locked
+func (s *Skiplist) offset(offset int, current *SkiplistNode) *SkiplistNode {
+	skipped := -1
+	if current != s.head {
+		current = current.prev
+	}
+	for i := len(current.next) - 1; i >= 0; i-- {
+		next := current.next[i]
+
+		if next == nil {
+			continue
+		}
+
+		width := next.width[i]
+		if skipped+width > offset {
+			continue
+		}
+		current = next
+		for ; current != s.tail; current = current.next[i] {
+			skipped += current.width[i]
+			if skipped == offset {
+				return current
+			}
+
+			next := current.next[i]
+			if next == nil || next.width[i]+skipped > offset {
+				break
+			}
+		}
+	}
+	return nil
 }
 
 // Number of items in the index
@@ -317,11 +317,9 @@ func (i *SkipListForwardIterator) Current() key.Type {
 
 // Sets the iterator's offset
 func (i *SkipListForwardIterator) Offset(offset int) Iterator {
-	for j := 0; j < offset; j++ {
-		i.node = i.node.next[0]
-		if i.node.id == key.NULL {
-			return i
-		}
+	i.node = i.list.offset(offset, i.node)
+	if i.node == nil {
+		i.node = i.list.tail
 	}
 	return i
 }
