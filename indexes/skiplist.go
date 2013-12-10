@@ -170,6 +170,7 @@ func (s *Skiplist) remove(id key.Type) {
 				}
 				break
 			} else if next.score > score {
+				next.width[i] -= 1
 				break
 			}
 		}
@@ -238,18 +239,21 @@ func (s *Skiplist) offset(offset int) *SkiplistNode {
 	return s.tail
 }
 
-// Even though we find a value with the matching score, we haven't
-// necessarily found the first value with that score.  Once we've found
-// a match, we need to start going backwards to find the first one.
-func (s *Skiplist) getRank(score int) int {
+func (s *Skiplist) getRank(score int, first bool) int {
 	width := 0
 	current := s.head
 	for i := s.levels; i >= 0; i-- {
-		for ; current != nil; current = current.next[i] {
+		for ; current != s.tail; current = current.next[i] {
 			if current.score == score {
 				width += current.width[i] - 1
-				for current := current.prev; current.prev != s.head && current.score == score; current = current.prev {
-					width -= 1
+				if first {
+					for current := current.prev; current.prev != s.head && current.score == score; current = current.prev {
+						width -= 1
+					}
+				} else {
+					for current := current.next[0]; current.next[0] != s.tail && current.score == score; current = current.next[0] {
+						width += 1
+					}
 				}
 				return width
 			}
@@ -261,10 +265,16 @@ func (s *Skiplist) getRank(score int) int {
 				}
 				break
 			}
+			// we're looking for the last of the maching records
+			// which means moving forward, which means not counting
+			// direct childrens
+			if first == false {
+				width--
+			}
 		}
 	}
 
-	if current != s.head {
+	if current != s.head && current != s.tail {
 		width++
 	}
 	return width
@@ -310,6 +320,7 @@ func (s *Skiplist) Forwards() Iterator {
 	s.lock.RLock()
 	return &SkipListForwardIterator{
 		list: s,
+		node: s.head.next[0],
 		to:   s.tail.prev.score,
 	}
 }
@@ -348,13 +359,16 @@ func (i *SkipListForwardIterator) Current() key.Type {
 
 // Sets the iterator's offset
 func (i *SkipListForwardIterator) Offset(offset int) Iterator {
-	i.node = i.list.offset(i.offset + offset)
+	offset += i.offset
+	if offset > 0 {
+		i.node = i.list.offset(offset)
+	}
 	return i
 }
 
 // Specified the range of values to interate over
 func (i *SkipListForwardIterator) Range(from, to int) Iterator {
-	i.offset = i.list.getRank(from)
+	i.offset = i.list.getRank(from, true)
 	i.to = to
 	return i
 }
@@ -366,9 +380,10 @@ func (i *SkipListForwardIterator) Close() {
 
 // Backward skip list iterator
 type SkipListBackwardsIterator struct {
-	list *Skiplist
-	node *SkiplistNode
-	from int
+	list   *Skiplist
+	node   *SkiplistNode
+	offset int
+	from   int
 }
 
 // Move to the next (lower score) item
@@ -387,33 +402,16 @@ func (i *SkipListBackwardsIterator) Current() key.Type {
 
 // Release the iterator
 func (i *SkipListBackwardsIterator) Offset(offset int) Iterator {
-	for j := 0; j < offset; j++ {
-		i.node = i.node.prev
-		if i.node.id == key.NULL {
-			return i
-		}
+	offset += i.offset
+	if offset > 0 {
+		i.node = i.list.offset(i.offset + offset)
 	}
 	return i
 }
 
 // Specified the range of values to interate over
 func (i *SkipListBackwardsIterator) Range(from, to int) Iterator {
-	// to is already greater than our lowest score
-	if to >= i.node.score {
-		return i
-	}
-
-	s := i.list
-	node := s.head
-	for i := s.levels; i >= 0; i-- {
-		for ; node.next[i] != nil; node = node.next[i] {
-			next := node.next[i]
-			if next.score > to {
-				break
-			}
-		}
-	}
-	i.node = node
+	i.offset = len(i.list.lookup) - i.list.getRank(to, false)
 	i.from = from
 	return i
 }

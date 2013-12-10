@@ -3,6 +3,7 @@ package indexes
 import (
 	"github.com/karlseguin/gspec"
 	"github.com/karlseguin/nabu/key"
+	"math/rand"
 	"testing"
 )
 
@@ -68,9 +69,12 @@ func TestSkiplistForwardIterationWithRange(t *testing.T) {
 }
 
 func TestSkiplistForwardIterationWithOffsetAndRange(t *testing.T) {
-	s := newSkiplist()
-	s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
-	assertIterator(t, s.Forwards().Range(1, 3).Offset(1), "c", "d")
+	for i := 0; i < 500; i++ {
+		rand.Seed(int64(i))
+		s := newSkiplist()
+		s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
+		assertIterator(t, s.Forwards().Range(1, 3).Offset(1), "c", "d")
+	}
 }
 
 func TestSkiplistForwardIterationWithRangeOutsideBounds(t *testing.T) {
@@ -82,7 +86,7 @@ func TestSkiplistForwardIterationWithRangeOutsideBounds(t *testing.T) {
 func TestSkiplistBackwardIterationWithRange(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c", "d", "e", "f"})
-	assertIterator(t, s.Backwards().Range(1, 3), "d", "c", "b")
+	assertIterator(t, s.Backwards().Range(1, 3).Offset(0), "d", "c", "b")
 }
 
 func TestSkiplistBackwardIterationWithOffsetAndRange(t *testing.T) {
@@ -92,9 +96,12 @@ func TestSkiplistBackwardIterationWithOffsetAndRange(t *testing.T) {
 }
 
 func TestSkiplistBackwardIterationWithRangeOutsideBounds(t *testing.T) {
-	s := newSkiplist()
-	s.Load([]key.Type{"a", "b", "c"})
-	assertIterator(t, s.Backwards().Range(-10, 10).Offset(1), "b", "a")
+	for i := 0; i < 500; i++ {
+		rand.Seed(int64(i))
+		s := newSkiplist()
+		s.Load([]key.Type{"a", "b", "c"})
+		assertIterator(t, s.Backwards().Range(-10, 10).Offset(1), "b", "a")
+	}
 }
 
 func TestSkiplistRankingIfMemberDoesNotExist(t *testing.T) {
@@ -113,7 +120,7 @@ func TestSkiplistRankingIfMemberExist(t *testing.T) {
 	spec.Expect(rank).ToEqual(2)
 }
 
-func TestSkipListAppendOnEmpty(t *testing.T) {
+func TestSkiplistAppendOnEmpty(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Append("x")
@@ -121,7 +128,7 @@ func TestSkipListAppendOnEmpty(t *testing.T) {
 	spec.Expect(s.GetScore("x")).ToEqual(1)
 }
 
-func TestSkipListPrependOnEmpty(t *testing.T) {
+func TestSkiplistPrependOnEmpty(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Prepend("x")
@@ -129,7 +136,7 @@ func TestSkipListPrependOnEmpty(t *testing.T) {
 	spec.Expect(s.GetScore("x")).ToEqual(-1)
 }
 
-func TestSkipListAppendToList(t *testing.T) {
+func TestSkiplistAppendToList(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b"})
@@ -139,7 +146,7 @@ func TestSkipListAppendToList(t *testing.T) {
 	spec.Expect(s.GetScore("x")).ToEqual(34)
 }
 
-func TestSkipListPrependToList(t *testing.T) {
+func TestSkiplistPrependToList(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b"})
@@ -149,7 +156,7 @@ func TestSkipListPrependToList(t *testing.T) {
 	spec.Expect(s.GetScore("x")).ToEqual(-334)
 }
 
-func TestSkipListReplace(t *testing.T) {
+func TestSkiplistReplace(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Set("a", 1)
@@ -159,41 +166,43 @@ func TestSkipListReplace(t *testing.T) {
 	spec.Expect(s.GetScore("a")).ToEqual(1)
 }
 
-//todo expand this
-func TestSkipListSetAndRemoveItems(t *testing.T) {
+func TestSkiplistSetAndRemoveItems(t *testing.T) {
 	spec := gspec.New(t)
-	s := newSkiplist()
-	s.Set("a", 1)
-	s.Set("b", 2)
-	s.Set("c", 3)
-	assertIterator(t, s.Forwards().Offset(0), "a", "b", "c")
-	spec.Expect(s.offset(0).id).ToEqual(key.Type("a"))
-	spec.Expect(s.offset(1).id).ToEqual(key.Type("b"))
-	spec.Expect(s.offset(2).id).ToEqual(key.Type("c"))
-	spec.Expect(s.offset(3).id).ToEqual(key.NULL)
+	for i := 0; i < 500; i++ {
+		rand.Seed(int64(i))
+		s := newSkiplist()
+		s.Set("a", 1)
+		s.Set("b", 2)
+		s.Set("c", 3)
+		assertIterator(t, s.Forwards().Offset(0), "a", "b", "c")
+		spec.Expect(s.offset(0).id).ToEqual(key.Type("a"))
+		spec.Expect(s.offset(1).id).ToEqual(key.Type("b"))
+		spec.Expect(s.offset(2).id).ToEqual(key.Type("c"))
+		spec.Expect(s.offset(3).id).ToEqual(key.NULL)
 
-	s.Remove("d")
-	assertIterator(t, s.Forwards().Offset(0), "a", "b", "c")
+		s.Remove("d")
+		assertIterator(t, s.Forwards().Offset(0), "a", "b", "c")
 
-	s.Remove("b")
-	assertIterator(t, s.Forwards().Offset(0), "a", "c")
-	spec.Expect(s.offset(0).id).ToEqual(key.Type("a"))
-	spec.Expect(s.offset(1).id).ToEqual(key.Type("c"))
-	spec.Expect(s.offset(2).id).ToEqual(key.NULL)
+		s.Remove("b")
+		assertIterator(t, s.Forwards().Offset(0), "a", "c")
+		spec.Expect(s.offset(0).id).ToEqual(key.Type("a"))
+		spec.Expect(s.offset(1).id).ToEqual(key.Type("c"))
+		spec.Expect(s.offset(2).id).ToEqual(key.NULL)
 
-	s.Remove("c")
-	assertIterator(t, s.Forwards().Offset(0), "a")
-	spec.Expect(s.offset(0).id).ToEqual(key.Type("a"))
-	spec.Expect(s.offset(1).id).ToEqual(key.NULL)
+		s.Remove("c")
+		assertIterator(t, s.Forwards().Offset(0), "a")
+		spec.Expect(s.offset(0).id).ToEqual(key.Type("a"))
+		spec.Expect(s.offset(1).id).ToEqual(key.NULL)
 
-	s.Set("b", 0)
-	assertIterator(t, s.Forwards().Offset(0), "b", "a")
-	spec.Expect(s.offset(0).id).ToEqual(key.Type("b"))
-	spec.Expect(s.offset(1).id).ToEqual(key.Type("a"))
-	spec.Expect(s.offset(2).id).ToEqual(key.NULL)
+		s.Set("b", 0)
+		assertIterator(t, s.Forwards().Offset(0), "b", "a")
+		spec.Expect(s.offset(0).id).ToEqual(key.Type("b"))
+		spec.Expect(s.offset(1).id).ToEqual(key.Type("a"))
+		spec.Expect(s.offset(2).id).ToEqual(key.NULL)
 
-	s.Remove("a")
-	assertIterator(t, s.Forwards().Offset(0), "b")
-	spec.Expect(s.offset(0).id).ToEqual(key.Type("b"))
-	spec.Expect(s.offset(1).id).ToEqual(key.NULL)
+		s.Remove("a")
+		assertIterator(t, s.Forwards().Offset(0), "b")
+		spec.Expect(s.offset(0).id).ToEqual(key.Type("b"))
+		spec.Expect(s.offset(1).id).ToEqual(key.NULL)
+	}
 }
