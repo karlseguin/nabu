@@ -162,8 +162,8 @@ func (d *Database) Update(doc Document) {
 	} else {
 		d.update(doc, meta, old, bucket)
 	}
-	for sort, rank := range meta.sorts {
-		d.addDocumentSort(sort, meta.id, rank)
+	for sort, score := range meta.sorts {
+		d.addDocumentSort(sort, meta.id, score)
 	}
 	if d.loading == false {
 		idBuffer := meta.id.Serialize()
@@ -331,8 +331,8 @@ func (d *Database) addDocumentIndex(baseName string, values []string, id key.Typ
 }
 
 // Sort indexes the document
-func (d *Database) addDocumentSort(sortName string, id key.Type, rank int) {
-	d.getOrCreateSort(sortName, -1).(indexes.DynamicSort).Set(id, rank)
+func (d *Database) addDocumentSort(sortName string, id key.Type, score int) {
+	d.getOrCreateSort(sortName, -1).(indexes.DynamicSort).Set(id, score)
 }
 
 // Tracks unique value belonging to an index

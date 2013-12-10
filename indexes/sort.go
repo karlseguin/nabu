@@ -7,9 +7,9 @@ import (
 // Interface for a sorted index
 type Sort interface {
 	Len() int
-	CanRank() bool
+	CanScore() bool
 	Load(ids []key.Type)
-	Rank(id key.Type) (int, bool)
+	GetScore(id key.Type) (int, bool)
 	Forwards() Iterator
 	Backwards() Iterator
 	Append(id key.Type)
@@ -48,5 +48,5 @@ func NewSort(length, maxUnsortedSize int) Sort {
 	if length < maxUnsortedSize {
 		return &StaticSort{}
 	}
-	return &StaticRankSort{}
+	return &StaticScoreSort{}
 }

@@ -38,8 +38,8 @@ func TestInsertANewDocument(t *testing.T) {
 	spec.Expect(doc.id).ToEqual("1134d")
 	spec.Expect(db.indexes["index$1"].Contains("1134d")).ToEqual(true)
 	spec.Expect(db.indexes["age$17"].Contains("1134d")).ToEqual(true)
-	spec.Expect(db.sorts["trending"].Rank("1134d")).ToEqual(1)
-	spec.Expect(db.sorts["age"].Rank("1134d")).ToEqual(3)
+	spec.Expect(db.sorts["trending"].GetScore("1134d")).ToEqual(1)
+	spec.Expect(db.sorts["age"].GetScore("1134d")).ToEqual(3)
 }
 
 func TestUpdatesADocument(t *testing.T) {
@@ -53,8 +53,8 @@ func TestUpdatesADocument(t *testing.T) {
 	spec.Expect(db.indexes["index$1"].Contains("94")).ToEqual(true)
 	spec.Expect(db.indexes["age$18"].Contains("94")).ToEqual(false)
 	spec.Expect(db.indexes["index$3"].Contains("94")).ToEqual(true)
-	spec.Expect(db.sorts["trending"].Rank("94")).ToEqual(10)
-	spec.Expect(db.sorts["age"].Rank("94")).ToEqual(2)
+	spec.Expect(db.sorts["trending"].GetScore("94")).ToEqual(10)
+	spec.Expect(db.sorts["age"].GetScore("94")).ToEqual(2)
 }
 
 func TestRemovesADocument(t *testing.T) {
@@ -67,8 +67,8 @@ func TestRemovesADocument(t *testing.T) {
 	spec.Expect(db.Get("94")).ToBeNil()
 	spec.Expect(db.indexes["index$1"].Contains("94")).ToEqual(false)
 	spec.Expect(db.indexes["age$22"].Contains("94")).ToEqual(false)
-	spec.Expect(db.sorts["trending"].Rank("94")).ToEqual(0)
-	spec.Expect(db.sorts["age"].Rank("94")).ToEqual(0)
+	spec.Expect(db.sorts["trending"].GetScore("94")).ToEqual(0)
+	spec.Expect(db.sorts["age"].GetScore("94")).ToEqual(0)
 }
 
 func TestRemovesADocumentById(t *testing.T) {
@@ -81,8 +81,8 @@ func TestRemovesADocumentById(t *testing.T) {
 	spec.Expect(db.Get("87")).ToBeNil()
 	spec.Expect(db.indexes["index$1"].Contains("87")).ToEqual(false)
 	spec.Expect(db.indexes["age$9"].Contains("87")).ToEqual(false)
-	spec.Expect(db.sorts["trending"].Rank("94")).ToEqual(0)
-	spec.Expect(db.sorts["age"].Rank("94")).ToEqual(0)
+	spec.Expect(db.sorts["trending"].GetScore("94")).ToEqual(0)
+	spec.Expect(db.sorts["age"].GetScore("94")).ToEqual(0)
 }
 
 type Doc struct {
@@ -104,8 +104,8 @@ func (d *Doc) ReadMeta(meta *Meta) {
 	for i := 0; i < len(d.indexes); i += 2 {
 		meta.Index(d.indexes[i], d.indexes[i+1])
 	}
-	for sortName, rank := range d.sorts {
-		meta.Sort(sortName, rank)
+	for sortName, score := range d.sorts {
+		meta.Sort(sortName, score)
 	}
 }
 

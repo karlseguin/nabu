@@ -14,7 +14,7 @@ type UnsortedResult struct {
 	documents []Document
 	ids       []key.Type
 	original  []key.Type
-	rank      map[key.Type]int
+	score     map[key.Type]int
 }
 
 func newUnsortedResult(db *Database) *UnsortedResult {
@@ -22,7 +22,7 @@ func newUnsortedResult(db *Database) *UnsortedResult {
 		db:       db,
 		found:    0,
 		original: make([]key.Type, db.maxUnsortedSize),
-		rank:     make(map[key.Type]int, db.maxUnsortedSize),
+		score:    make(map[key.Type]int, db.maxUnsortedSize),
 	}
 	min := db.maxUnsortedSize
 	if db.maxLimit < min {
@@ -55,9 +55,9 @@ func (r *UnsortedResult) Docs() []Document {
 	return r.documents[0:r.found]
 }
 
-func (r *UnsortedResult) add(value key.Type, rank int) {
+func (r *UnsortedResult) add(value key.Type, score int) {
 	r.original[r.found] = value
-	r.rank[value] = rank
+	r.score[value] = score
 	r.found++
 }
 
@@ -114,7 +114,7 @@ func (r *UnsortedResult) Close() {
 }
 
 func (r *UnsortedResult) Less(i, j int) bool {
-	return r.rank[r.ids[i]] < r.rank[r.ids[j]]
+	return r.score[r.ids[i]] < r.score[r.ids[j]]
 }
 
 func (r *UnsortedResult) Swap(i, j int) {

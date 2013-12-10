@@ -100,7 +100,7 @@ func TestSkiplistBackwardIterationWithRangeOutsideBounds(t *testing.T) {
 func TestSkiplistRankingIfMemberDoesNotExist(t *testing.T) {
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	_, exists := s.Rank("z")
+	_, exists := s.GetScore("z")
 	gspec.New(t).Expect(exists).ToEqual(false)
 }
 
@@ -108,7 +108,7 @@ func TestSkiplistRankingIfMemberExist(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSkiplist()
 	s.Load([]key.Type{"a", "b", "c"})
-	rank, exists := s.Rank("c")
+	rank, exists := s.GetScore("c")
 	spec.Expect(exists).ToEqual(true)
 	spec.Expect(rank).ToEqual(2)
 }
@@ -118,7 +118,7 @@ func TestSkipListAppendOnEmpty(t *testing.T) {
 	s := newSkiplist()
 	s.Append("x")
 	assertIterator(t, s.Forwards().Offset(0), "x")
-	spec.Expect(s.Rank("x")).ToEqual(1)
+	spec.Expect(s.GetScore("x")).ToEqual(1)
 }
 
 func TestSkipListPrependOnEmpty(t *testing.T) {
@@ -126,7 +126,7 @@ func TestSkipListPrependOnEmpty(t *testing.T) {
 	s := newSkiplist()
 	s.Prepend("x")
 	assertIterator(t, s.Forwards().Offset(0), "x")
-	spec.Expect(s.Rank("x")).ToEqual(-1)
+	spec.Expect(s.GetScore("x")).ToEqual(-1)
 }
 
 func TestSkipListAppendToList(t *testing.T) {
@@ -136,7 +136,7 @@ func TestSkipListAppendToList(t *testing.T) {
 	s.Set("c", 33)
 	s.Append("x")
 	assertIterator(t, s.Forwards().Offset(0), "a", "b", "c", "x")
-	spec.Expect(s.Rank("x")).ToEqual(34)
+	spec.Expect(s.GetScore("x")).ToEqual(34)
 }
 
 func TestSkipListPrependToList(t *testing.T) {
@@ -146,7 +146,7 @@ func TestSkipListPrependToList(t *testing.T) {
 	s.Set("c", -333)
 	s.Prepend("x")
 	assertIterator(t, s.Forwards().Offset(0), "x", "c", "a", "b")
-	spec.Expect(s.Rank("x")).ToEqual(-334)
+	spec.Expect(s.GetScore("x")).ToEqual(-334)
 }
 
 func TestSkipListReplace(t *testing.T) {
@@ -156,7 +156,7 @@ func TestSkipListReplace(t *testing.T) {
 	s.Set("b", 2)
 	s.Set("a", 1)
 	assertIterator(t, s.Forwards().Offset(0), "a", "b")
-	spec.Expect(s.Rank("a")).ToEqual(1)
+	spec.Expect(s.GetScore("a")).ToEqual(1)
 }
 
 //todo expand this

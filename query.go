@@ -142,7 +142,7 @@ func (q *Query) execute(indexes indexes.Indexes) Result {
 	if firstLength == 0 {
 		return EmptyResult
 	}
-	if q.sort.CanRank() && q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
+	if q.sort.CanScore() && q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
 		return q.findByIndex(indexes)
 	}
 	return q.findBySort(indexes)
@@ -194,8 +194,8 @@ func (q *Query) findByIndex(indexes indexes.Indexes) Result {
 				goto nomatch
 			}
 		}
-		if rank, exists := q.sort.Rank(id); exists && (!q.ranged || (rank >= q.from && rank <= q.to)) {
-			result.add(id, rank)
+		if score, exists := q.sort.GetScore(id); exists && (!q.ranged || (score >= q.from && score <= q.to)) {
+			result.add(id, score)
 		}
 	nomatch:
 	}

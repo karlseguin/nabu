@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// A static sort index not capable of ranking documents. This index
+// A static sort index not capable of scoring documents. This index
 // is ideal when the sort index doesn't update frequently (possibly
 // only updated asynchronously on a schedule) and are small
 type StaticSort struct {
@@ -23,8 +23,8 @@ func (s *StaticSort) Len() int {
 	return s.length
 }
 
-// Whether this type of index can rank (a StaticSort index cannot rank)
-func (s *StaticSort) CanRank() bool {
+// Whether this type of index has the index score
+func (s *StaticSort) CanScore() bool {
 	return false
 }
 
@@ -48,7 +48,7 @@ func (s *StaticSort) Load(ids []key.Type) {
 }
 
 // Always returns 0
-func (s *StaticSort) Rank(id key.Type) (int, bool) {
+func (s *StaticSort) GetScore(id key.Type) (int, bool) {
 	return 0, false
 }
 
@@ -104,7 +104,7 @@ func (s *StaticSort) Backwards() Iterator {
 	}
 }
 
-// Forward iterator through a static sort (rankable or not) index
+// Forward iterator through a static sort index
 type StaticSortForwardIterator struct {
 	position int
 	ids      []key.Type
@@ -143,7 +143,7 @@ func (i *StaticSortForwardIterator) Close() {
 	i.lock.RUnlock()
 }
 
-// Backward iterator through a static sort (rankable or not) index
+// Backward iterator through a static sort index
 type StaticSortBackwardsIterator struct {
 	position int
 	ids      []key.Type

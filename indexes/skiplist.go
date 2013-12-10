@@ -35,7 +35,7 @@ type Skiplist struct {
 }
 
 type SkiplistNode struct {
-	rank  int
+	score int
 	id    key.Type
 	next  []*SkiplistNode
 	width []int
@@ -62,12 +62,12 @@ func newSkiplist() *Skiplist {
 	}
 }
 
-// Stores a id within the index with the specified rank
-func (s *Skiplist) Set(id key.Type, rank int) {
+// Stores a id within the index with the specified score
+func (s *Skiplist) Set(id key.Type, score int) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if r, exists := s.lookup[id]; exists {
-		if r == rank {
+		if r == score {
 			return
 		}
 		s.remove(id)
@@ -76,7 +76,7 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 	level := s.getLevel()
 	node := &SkiplistNode{
 		id:    id,
-		rank:  rank,
+		score: score,
 		width: make([]int, level+1),
 		next:  make([]*SkiplistNode, level+1),
 	}
@@ -85,7 +85,7 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 	for i := s.levels; i >= 0; i-- {
 		for ; current.next[i] != nil; current = current.next[i] {
 			next := current.next[i]
-			if next.rank > rank || (next.rank == rank && next.id > id) || next == s.tail {
+			if next.score > score || (next.score == score && next.id > id) || next == s.tail {
 				break
 			}
 		}
@@ -99,7 +99,7 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 		if i == 0 {
 			node.width[0] = 1
 		} else {
-			width := s.getWidth(current.next[i-1], i-1, rank)
+			width := s.getWidth(current.next[i-1], i-1, score)
 			for j := i; j <= level; j++ {
 				node.width[j] += width
 			}
@@ -121,7 +121,7 @@ func (s *Skiplist) Set(id key.Type, rank int) {
 			next.width[i] -= node.width[i] - 1
 		}
 	}
-	s.lookup[id] = rank
+	s.lookup[id] = score
 }
 
 // Removes the id from the index
@@ -131,29 +131,29 @@ func (s *Skiplist) Remove(id key.Type) {
 	s.remove(id)
 }
 
-// Appends the id to the end of the index giving it a rank of
-// the current max rank + 1.
+// Appends the id to the end of the index giving it a score of
+// the current max score + 1.
 func (s *Skiplist) Append(id key.Type) {
 	s.lock.RLock()
-	highRank := s.tail.prev.rank
+	highScore := s.tail.prev.score
 	s.lock.RUnlock()
-	s.Set(id, highRank+1)
+	s.Set(id, highScore+1)
 }
 
-// Prepends the id to the end of the index giving it a rank of
-// the current min rank - 1 (this could negative)
+// Prepends the id to the end of the index giving it a score of
+// the current min score - 1 (this could negative)
 func (s *Skiplist) Prepend(id key.Type) {
 	s.lock.RLock()
-	var lowRank int
+	var lowScore int
 	if s.head.next[0] != nil {
-		lowRank = s.head.next[0].rank
+		lowScore = s.head.next[0].score
 	}
 	s.lock.RUnlock()
-	s.Set(id, lowRank-1)
+	s.Set(id, lowScore-1)
 }
 
 func (s *Skiplist) remove(id key.Type) {
-	rank, exists := s.lookup[id]
+	score, exists := s.lookup[id]
 	if exists == false {
 		return
 	}
@@ -169,7 +169,7 @@ func (s *Skiplist) remove(id key.Type) {
 					nn.width[i] += next.width[i] - 1
 				}
 				break
-			} else if next.rank > rank {
+			} else if next.score > score {
 				break
 			}
 		}
@@ -181,10 +181,10 @@ func (s *Skiplist) remove(id key.Type) {
 }
 
 // Get a node's width
-func (s *Skiplist) getWidth(node *SkiplistNode, level int, rank int) int {
+func (s *Skiplist) getWidth(node *SkiplistNode, level int, score int) int {
 	width := 0
 	for ; node != nil && node != s.tail; node = node.next[level] {
-		if node.rank > rank {
+		if node.score > score {
 			break
 		}
 		width += node.width[level]
@@ -238,24 +238,24 @@ func (s *Skiplist) offset(offset int) *SkiplistNode {
 	return s.tail
 }
 
-// Even though we find a value with the matching rank, we haven't
-// necessarily found the first value with that rank.  Once we've found
+// Even though we find a value with the matching score, we haven't
+// necessarily found the first value with that score.  Once we've found
 // a match, we need to start going backwards to find the first one.
-func (s *Skiplist) getPosition(rank int) int {
+func (s *Skiplist) getRank(score int) int {
 	width := 0
 	current := s.head
 	for i := s.levels; i >= 0; i-- {
 		for ; current != nil; current = current.next[i] {
-			if current.rank == rank {
+			if current.score == score {
 				width += current.width[i] - 1
-				for current := current.prev; current.prev != s.head && current.rank == rank; current = current.prev {
+				for current := current.prev; current.prev != s.head && current.score == score; current = current.prev {
 					width -= 1
 				}
 				return width
 			}
 			width += current.width[i]
 			next := current.next[i]
-			if next == nil || next.rank > rank {
+			if next == nil || next.score > score {
 				if current != s.head {
 					width -= 1
 				}
@@ -277,14 +277,14 @@ func (s *Skiplist) Len() int {
 	return len(s.lookup)
 }
 
-// This index is able to rank documents, and thus can be
+// This index is able to score documents, and thus can be
 // used for the post-sorting used by index-first queries
-func (s *Skiplist) CanRank() bool {
+func (s *Skiplist) CanScore() bool {
 	return true
 }
 
 // Bulk loads ids into the index. This replaces any existing values.
-// The rank is implied by the array order.
+// The score is implied by the array order.
 func (s *Skiplist) Load(ids []key.Type) {
 	s.lock.Lock()
 	s.head.next = make([]*SkiplistNode, maxLevel)
@@ -298,29 +298,29 @@ func (s *Skiplist) Load(ids []key.Type) {
 }
 
 // Ranks a document
-func (s *Skiplist) Rank(id key.Type) (int, bool) {
+func (s *Skiplist) GetScore(id key.Type) (int, bool) {
 	s.lock.RLock()
-	rank, exists := s.lookup[id]
+	score, exists := s.lookup[id]
 	s.lock.RUnlock()
-	return rank, exists
+	return score, exists
 }
 
-// Generates a forward iterator (from low rank to high)
+// Generates a forward iterator (from low score to high)
 func (s *Skiplist) Forwards() Iterator {
 	s.lock.RLock()
 	return &SkipListForwardIterator{
 		list: s,
-		to:   s.tail.prev.rank,
+		to:   s.tail.prev.score,
 	}
 }
 
-// Generates a backward iterator (from high rank to low)
+// Generates a backward iterator (from high score to low)
 func (s *Skiplist) Backwards() Iterator {
 	s.lock.RLock()
 	return &SkipListBackwardsIterator{
 		node: s.tail.prev,
 		list: s,
-		from: s.head.next[0].rank,
+		from: s.head.next[0].score,
 	}
 }
 
@@ -332,10 +332,10 @@ type SkipListForwardIterator struct {
 	to     int
 }
 
-// Move to the next (higher ranked) item
+// Move to the next (higher score) item
 func (i *SkipListForwardIterator) Next() key.Type {
 	i.node = i.node.next[0]
-	if i.node.rank > i.to {
+	if i.node.score > i.to {
 		i.node = i.list.tail
 	}
 	return i.Current()
@@ -354,7 +354,7 @@ func (i *SkipListForwardIterator) Offset(offset int) Iterator {
 
 // Specified the range of values to interate over
 func (i *SkipListForwardIterator) Range(from, to int) Iterator {
-	i.offset = i.list.getPosition(from)
+	i.offset = i.list.getRank(from)
 	i.to = to
 	return i
 }
@@ -371,10 +371,10 @@ type SkipListBackwardsIterator struct {
 	from int
 }
 
-// Move to the next (lower ranked) item
+// Move to the next (lower score) item
 func (i *SkipListBackwardsIterator) Next() key.Type {
 	i.node = i.node.prev
-	if i.node.rank < i.from {
+	if i.node.score < i.from {
 		i.node = i.list.head
 	}
 	return i.Current()
@@ -398,8 +398,8 @@ func (i *SkipListBackwardsIterator) Offset(offset int) Iterator {
 
 // Specified the range of values to interate over
 func (i *SkipListBackwardsIterator) Range(from, to int) Iterator {
-	// to is already greater than our lowest rank
-	if to >= i.node.rank {
+	// to is already greater than our lowest score
+	if to >= i.node.score {
 		return i
 	}
 
@@ -408,7 +408,7 @@ func (i *SkipListBackwardsIterator) Range(from, to int) Iterator {
 	for i := s.levels; i >= 0; i-- {
 		for ; node.next[i] != nil; node = node.next[i] {
 			next := node.next[i]
-			if next.rank > to {
+			if next.score > to {
 				break
 			}
 		}

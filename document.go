@@ -48,8 +48,8 @@ func (m *Meta) Index(indexName, value string) *Meta {
 	return m
 }
 
-// A document's sort and rank. Can be called Multiple times
-func (m *Meta) Sort(name string, rank int) *Meta {
-	m.sorts[name] = rank
+// A document's sort and score. Can be called Multiple times
+func (m *Meta) Sort(name string, score int) *Meta {
+	m.sorts[name] = score
 	return m
 }
