@@ -1,26 +1,31 @@
 package conditions
 
 import (
-	"strconv"
-	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/indexes"
+	"github.com/karlseguin/nabu/key"
+	"strconv"
 )
 
 type LessThan struct {
 	Value int
+	index indexes.Index
 }
 
 func (c *LessThan) Key() string {
 	return "lt" + strconv.Itoa(c.Value)
 }
 
-func (c *LessThan) Apply(index indexes.Index) map[key.Type]interface{} {
-	m := make(map[key.Type]interface{})
-	iterator := index.Backwards()
-	defer iterator.Close()
-	iterator.Range(-4294967296, c.Value-1).Offset(0)
-	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
-		m[id] = struct{}{}
+func (c *LessThan) On(index indexes.Index) {
+	c.index = index
+}
+
+func (c *LessThan) Len() int {
+	return c.index.GetRank(c.Value-1, false)
+}
+
+func (c *LessThan) Contains(id key.Type) bool {
+	if score, exists := c.index.Contains(id); exists && score < c.Value {
+		return true
 	}
-	return m
+	return false
 }

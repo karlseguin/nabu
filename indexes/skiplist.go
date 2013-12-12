@@ -1,11 +1,11 @@
 package indexes
 
 import (
+	"fmt"
 	"github.com/karlseguin/nabu/key"
 	"math"
-	"fmt"
-	"strings"
 	"math/rand"
+	"strings"
 	"sync"
 )
 
@@ -29,7 +29,7 @@ func init() {
 // A Skiplist sorted index. Ideal for sorted indexes which are frequently
 // modified
 type Skiplist struct {
-	name string
+	name   string
 	levels int
 	lock   sync.RWMutex
 	head   *SkiplistNode
@@ -64,7 +64,7 @@ func newSkiplist(name string) *Skiplist {
 
 	return &Skiplist{
 		levels: 0,
-		name: name,
+		name:   name,
 		head:   head,
 		tail:   tail,
 		lookup: make(map[key.Type]int),
@@ -81,18 +81,20 @@ func loadSkiplist(name string, values map[key.Type]int) *Skiplist {
 }
 
 func (s *Skiplist) draw() {
-  println("\n")
+	println("\n")
 
-  for level := s.levels; level >= 0; level-- {
-    if s.head.next[level] == nil { continue }
-    print(level, ": ")
-    for node := s.head.next[level]; node != s.tail; node = node.next[level] {
-      width := node.width[level]
-      print("--", strings.Repeat("------", width-1),  node.score, "(", width, ")")
-    }
-    println("")
-  }
-  fmt.Println("")
+	for level := s.levels; level >= 0; level-- {
+		if s.head.next[level] == nil {
+			continue
+		}
+		print(level, ": ")
+		for node := s.head.next[level]; node != s.tail; node = node.next[level] {
+			width := node.width[level]
+			print("--", strings.Repeat("------", width-1), node.score, "(", width, ")")
+		}
+		println("")
+	}
+	fmt.Println("")
 }
 
 func (s *Skiplist) Load(values []key.Type) {
@@ -281,7 +283,7 @@ func (s *Skiplist) offset(offset int) *SkiplistNode {
 	return s.tail
 }
 
-func (s *Skiplist) getRank(score int, first bool) int {
+func (s *Skiplist) GetRank(score int, first bool) int {
 	width := -1
 	prev := s.head
 	for i := s.levels; i >= 0; i-- {
@@ -370,7 +372,7 @@ func (i *SkiplistForwardIterator) Offset(offset int) Iterator {
 
 // Specified the range of values to interate over
 func (i *SkiplistForwardIterator) Range(from, to int) Iterator {
-	i.offset = i.list.getRank(from, true)
+	i.offset = i.list.GetRank(from, true)
 	i.to = to
 	return i
 }
@@ -416,7 +418,7 @@ func (i *SkiplistBackwardsIterator) Offset(offset int) Iterator {
 
 // Specified the range of values to interate over
 func (i *SkiplistBackwardsIterator) Range(from, to int) Iterator {
-	i.offset = i.list.getRank(to, false)
+	i.offset = i.list.GetRank(to, false)
 	i.from = from
 	return i
 }

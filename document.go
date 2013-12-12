@@ -23,12 +23,12 @@ type Meta struct {
 	uintId   uint
 	stringId string
 
-	iIndexes    map[string]int
+	iIndexes map[string]int
 }
 
 func newMeta() *Meta {
 	return &Meta{
-		iIndexes:   make(map[string]int),
+		iIndexes: make(map[string]int),
 	}
 }
 

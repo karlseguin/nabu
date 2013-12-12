@@ -1,26 +1,31 @@
 package conditions
 
 import (
-	"strconv"
-	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/indexes"
+	"github.com/karlseguin/nabu/key"
+	"strconv"
 )
 
 type GreaterThan struct {
 	Value int
+	index indexes.Index
 }
 
 func (c *GreaterThan) Key() string {
 	return "gt" + strconv.Itoa(c.Value)
 }
 
-func (c *GreaterThan) Apply(index indexes.Index) map[key.Type]interface{} {
-	m := make(map[key.Type]interface{})
-	iterator := index.Forwards()
-	defer iterator.Close()
-	iterator.Range(c.Value+1, 4294967296).Offset(0)
-	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
-		m[id] = struct{}{}
+func (c *GreaterThan) On(index indexes.Index) {
+	c.index = index
+}
+
+func (c *GreaterThan) Len() int {
+	return c.index.Len() - c.index.GetRank(c.Value+1, true)
+}
+
+func (c *GreaterThan) Contains(id key.Type) bool {
+	if score, exists := c.index.Contains(id); exists && score > c.Value {
+		return true
 	}
-	return m
+	return false
 }

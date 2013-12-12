@@ -11,6 +11,7 @@ type Index interface {
 	SetInt(id key.Type, score int)
 	Remove(id key.Type) int
 	Contains(id key.Type) (int, bool)
+	GetRank(score int, first bool) int
 	RLock()
 	RUnlock()
 
@@ -31,7 +32,6 @@ type Iterator interface {
 	Close()
 }
 
-
 // Creates the index
 func NewIndex(name string) Index {
 	return newSkiplist(name)
@@ -44,3 +44,17 @@ func LoadIndex(name string, values map[key.Type]int) Index {
 
 // An array of indexes
 type Indexes []Index
+
+// Read locks all indexes within the array
+func (indexes Indexes) RLock() {
+	for _, index := range indexes {
+		index.RLock()
+	}
+}
+
+// Read unlocks all indexes within the array
+func (indexes Indexes) RUnlock() {
+	for _, index := range indexes {
+		index.RUnlock()
+	}
+}

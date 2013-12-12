@@ -54,7 +54,7 @@ type Database struct {
 	queryPool       chan *Query
 	buckets         map[int]*Bucket
 	dStorage        storage.Storage
-	mStorage storage.Storage
+	mStorage        storage.Storage
 	indexLock       sync.RWMutex
 	idMap           *IdMap
 	sortedResults   chan *SortedResult
@@ -159,7 +159,9 @@ func (d *Database) Remove(doc Document) {
 		d.indexLock.RLock()
 		index, exists := d.indexes[name]
 		d.indexLock.RUnlock()
-		if exists == false { continue }
+		if exists == false {
+			continue
+		}
 		index.Remove(id)
 	}
 
@@ -230,7 +232,9 @@ func (d *Database) getOrCreateIndex(name string) indexes.Index {
 	d.indexLock.RLock()
 	index, exists := d.indexes[name]
 	d.indexLock.RUnlock()
-	if exists { return index }
+	if exists {
+		return index
+	}
 
 	d.indexLock.Lock()
 	defer d.indexLock.Unlock()

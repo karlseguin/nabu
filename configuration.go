@@ -12,7 +12,7 @@ type Configuration struct {
 	skipLoad               bool
 	dbPath                 string
 	iFactory               IntFactory
-	sFactory StringFactory
+	sFactory               StringFactory
 	bucketCount            int
 	defaultLimit           int
 	cacheWorkers           int

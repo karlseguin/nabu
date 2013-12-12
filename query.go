@@ -20,8 +20,7 @@ type Query struct {
 	sort         indexes.Index
 	ranged       bool
 	indexNames   []string
-	conditions   []Condition
-	sets         Sets
+	conditions   Conditions
 	indexes      indexes.Indexes
 }
 
@@ -30,10 +29,9 @@ func newQuery(db *Database) *Query {
 	q := &Query{
 		db:         db,
 		cache:      true,
-		sets:    make(Sets, db.maxIndexesPerQuery),
 		indexes:    make(indexes.Indexes, db.maxIndexesPerQuery),
 		indexNames: make([]string, db.maxIndexesPerQuery),
-		conditions: make([]Condition, db.maxIndexesPerQuery),
+		conditions: make(Conditions, db.maxIndexesPerQuery),
 	}
 	q.reset()
 	return q
@@ -117,23 +115,23 @@ func (q *Query) Execute() Result {
 	// 	}
 	// }
 
-	if q.loadSets() == false {
+	if q.prepareConditions() == false {
 		return EmptyResult
 	}
 	return q.execute()
 }
 
 // Loads the indexes used by the query
-func (q *Query) loadSets() bool {
+func (q *Query) prepareConditions() bool {
 	indexCount := q.indexCount
 	if q.db.LookupIndexes(q.indexNames[0:indexCount], q.indexes) == false {
 		return false
 	}
 	for i := 0; i < indexCount; i++ {
-		q.sets[i] = q.conditions[i].Apply(q.indexes[i])
+		q.conditions[i].On(q.indexes[i])
 	}
 	if indexCount > 1 {
-		sort.Sort(q.sets[0:indexCount])
+		sort.Sort(q.conditions[0:indexCount])
 	}
 	return true
 }
@@ -143,7 +141,7 @@ func (q *Query) loadSets() bool {
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.
 func (q *Query) execute() Result {
-	if len(q.sets[0]) == 0 {
+	if q.conditions[0].Len() == 0 {
 		return EmptyResult
 	}
 	return q.findBySort()
@@ -197,10 +195,11 @@ func (q *Query) findBySort() Result {
 		iterator = q.sort.Forwards()
 	}
 
-	sets := q.sets
+	indexes := q.indexes[0:indexCount]
+	indexes.RLock()
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < indexCount; j++ {
-			if _, exists := sets[j][id]; exists == false {
+			if q.conditions[j].Contains(id) == false {
 				goto nomatchdesc
 			}
 		}
@@ -215,6 +214,7 @@ func (q *Query) findBySort() Result {
 		}
 	nomatchdesc:
 	}
+	indexes.RUnlock()
 	iterator.Close()
 	result.hasMore = result.total > (q.offset + q.limit)
 	if q.includeTotal == false {
