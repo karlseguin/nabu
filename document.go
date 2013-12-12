@@ -20,7 +20,8 @@ type Document interface {
 
 // Meta describes a document
 type Meta struct {
-	id      key.Type
+	uintId      uint
+	stringId string
 	sorts   map[string]int
 	indexes map[string][]string
 }
@@ -34,8 +35,21 @@ func newMeta() *Meta {
 
 // The document's Id
 func (m *Meta) Id(id uint) *Meta {
-	m.id = key.Type(id)
+	m.uintId = id
 	return m
+}
+
+// The document's Id
+func (m *Meta) StringId(id string) *Meta {
+	m.stringId = id
+	return m
+}
+
+func (m *Meta) getId(idMap *IdMap) key.Type {
+	if len(m.stringId) == 0 {
+		return key.Type(m.uintId)
+	}
+	return idMap.get(m.stringId, true)
 }
 
 // A document's index and value. Can be called multiple times

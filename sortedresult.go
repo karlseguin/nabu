@@ -41,7 +41,7 @@ func (r *SortedResult) Ids() []uint {
 
 func (r *SortedResult) Docs() []Document {
 	for i := 0; i < r.found; i++ {
-		r.documents[i] = r.db.Get(key.Type(r.ids[i]))
+		r.documents[i] = r.db.Get(r.ids[i])
 	}
 	return r.documents[0:r.found]
 }

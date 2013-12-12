@@ -57,6 +57,7 @@ type Database struct {
 	dStorage        storage.Storage
 	indexLock       sync.RWMutex
 	indexValueLock  sync.RWMutex
+	idMap *IdMap
 	sorts           map[string]indexes.Sort
 	indexValues     map[string][]string
 	sortedResults   chan *SortedResult
@@ -78,6 +79,7 @@ func New(c *Configuration) *Database {
 		buckets:         make(map[int]*Bucket, c.bucketCount),
 		sortedResults:   make(chan *SortedResult, c.sortedResultPoolSize),
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
+		idMap: newIdMap(),
 	}
 	db.cache = cache.New(db, db.cacheWorkers, db.maxCacheStaleness)
 	for i := 0; i < int(c.bucketCount); i++ {
@@ -137,36 +139,47 @@ func (d *Database) LoadSort(sortName string, ids []key.Type, ranged bool) {
 // Appends a value to the specified sort. This can be used against
 // either a dynamic or static sort. This isn't particularly efficient
 // when used against a static sort, though occasional use is encouraged.
-func (d *Database) AppendSort(sortName string, id key.Type) {
-	d.getOrCreateSort(sortName, -1).Append(id)
+func (d *Database) AppendSort(sortName string, id uint) {
+	d.getOrCreateSort(sortName, -1).Append(key.Type(id))
 }
 
 // Prepends a value to the specified sort. See the notes on AppendSort
 // for more details
-func (d *Database) PrependSort(sortName string, id key.Type) {
-	d.getOrCreateSort(sortName, -1).Prepend(id)
+func (d *Database) PrependSort(sortName string, id uint) {
+	d.getOrCreateSort(sortName, -1).Prepend(key.Type(id))
 }
 
 // Retrieves a document by id
-func (d *Database) Get(id key.Type) Document {
-	return d.getFromBucket(id, d.getBucket(id))
+func (d *Database) Get(id uint) Document {
+	typed := key.Type(id)
+	return d.getFromBucket(typed, d.getBucket(typed))
+}
+
+// Retrieves a document by id
+func (d *Database) StringGet(id string) Document {
+	typed := d.idMap.get(id, false)
+	if typed == key.NULL {
+		return nil
+	}
+	return d.getFromBucket(typed, d.getBucket(typed))
 }
 
 // Inserts or updates the document
 func (d *Database) Update(doc Document) {
 	meta := newMeta()
 	doc.ReadMeta(meta)
-	bucket := d.getBucket(meta.id)
-	if old := d.getMeta(meta.id, bucket); old == nil {
-		d.insert(doc, meta, bucket)
+	id := meta.getId(d.idMap)
+	bucket := d.getBucket(id)
+	if old := d.getMeta(id, bucket); old == nil {
+		d.insert(doc, id, meta, bucket)
 	} else {
-		d.update(doc, meta, old, bucket)
+		d.update(doc, id, meta, old, bucket)
 	}
 	for sort, score := range meta.sorts {
-		d.addDocumentSort(sort, meta.id, score)
+		d.addDocumentSort(sort, id, score)
 	}
 	if d.loading == false {
-		idBuffer := meta.id.Serialize()
+		idBuffer := id.Serialize()
 		defer idBuffer.Close()
 		d.dStorage.Put(idBuffer.Bytes(), serializeValue(doc))
 	}
@@ -177,7 +190,7 @@ func (d *Database) Update(doc Document) {
 func (d *Database) Remove(doc Document) {
 	meta := newMeta()
 	doc.ReadMeta(meta)
-	id := meta.id
+	id := meta.getId(d.idMap)
 	for baseName, values := range meta.indexes {
 		d.removeDocumentIndex(baseName, values, id)
 	}
@@ -194,7 +207,22 @@ func (d *Database) Remove(doc Document) {
 
 // Removes to the document by id. Safe to call even if the
 // id doesn't exist
-func (d *Database) RemoveById(id key.Type) {
+func (d *Database) RemoveById(id uint) {
+	d.removeByTypedId(key.Type(id))
+}
+
+// Removes to the document by id. Safe to call even if the
+// id doesn't exist
+func (d *Database) RemoveByStringId(id string) {
+	typed := d.idMap.get(id, false)
+	if typed != key.NULL {
+		d.removeByTypedId(typed)
+	}
+}
+
+// Removes to the document by id. Safe to call even if the
+// id doesn't exist
+func (d *Database) removeByTypedId(id key.Type) {
 	bucket := d.getBucket(id)
 	doc := d.getFromBucket(id, bucket)
 	if doc != nil {
@@ -263,8 +291,7 @@ func (d *Database) getBucket(key key.Type) int {
 }
 
 // Inserts a new document
-func (d *Database) insert(doc Document, meta *Meta, bucket int) {
-	id := meta.id
+func (d *Database) insert(doc Document, id key.Type, meta *Meta, bucket int) {
 	for baseName, values := range meta.indexes {
 		d.addDocumentIndex(baseName, values, id)
 	}
@@ -272,9 +299,7 @@ func (d *Database) insert(doc Document, meta *Meta, bucket int) {
 }
 
 // Updates an existing document
-func (d *Database) update(doc Document, meta *Meta, old *Meta, bucket int) {
-	id := meta.id
-
+func (d *Database) update(doc Document, id key.Type, meta *Meta, old *Meta, bucket int) {
 	for baseName, values := range meta.indexes {
 		length := len(values)
 

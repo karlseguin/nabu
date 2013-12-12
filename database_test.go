@@ -42,6 +42,19 @@ func TestInsertANewDocument(t *testing.T) {
 	spec.Expect(db.sorts["age"].GetScore(1123)).ToEqual(3)
 }
 
+func TestInsertANewDocumentWithAStringId(t *testing.T) {
+	spec := gspec.New(t)
+	db := SmallDB()
+	defer db.Close()
+	db.Update(NewStringDoc("XX", []string{"index", "1", "age", "17"}, map[string]int{"trending": 1, "age": 3}))
+	doc := db.StringGet("XX").(*StringDoc)
+	spec.Expect(doc.id).ToEqual("XX")
+	spec.Expect(db.indexes["index$1"].Contains(1)).ToEqual(true)
+	spec.Expect(db.indexes["age$17"].Contains(1)).ToEqual(true)
+	spec.Expect(db.sorts["trending"].GetScore(1)).ToEqual(1)
+	spec.Expect(db.sorts["age"].GetScore(1)).ToEqual(3)
+}
+
 func TestUpdatesADocument(t *testing.T) {
 	spec := gspec.New(t)
 	db := SmallDB()
@@ -81,8 +94,22 @@ func TestRemovesADocumentById(t *testing.T) {
 	spec.Expect(db.Get(87)).ToBeNil()
 	spec.Expect(db.indexes["index$1"].Contains(87)).ToEqual(false)
 	spec.Expect(db.indexes["age$9"].Contains(87)).ToEqual(false)
-	spec.Expect(db.sorts["trending"].GetScore(94)).ToEqual(0)
-	spec.Expect(db.sorts["age"].GetScore(94)).ToEqual(0)
+	spec.Expect(db.sorts["trending"].GetScore(87)).ToEqual(0)
+	spec.Expect(db.sorts["age"].GetScore(87)).ToEqual(0)
+}
+
+func TestRemovesADocumentByStringId(t *testing.T) {
+	spec := gspec.New(t)
+	db := SmallDB()
+	defer db.Close()
+	doc := NewStringDoc("111z", []string{"index", "1", "age", "9"}, map[string]int{"trending": 10, "age": 2})
+	db.Update(doc)
+	db.RemoveByStringId("111z")
+	spec.Expect(db.StringGet("111z")).ToBeNil()
+	spec.Expect(db.indexes["index$1"].Contains(1)).ToEqual(false)
+	spec.Expect(db.indexes["age$9"].Contains(1)).ToEqual(false)
+	spec.Expect(db.sorts["trending"].GetScore(1)).ToEqual(0)
+	spec.Expect(db.sorts["age"].GetScore(1)).ToEqual(0)
 }
 
 type Doc struct {
@@ -101,6 +128,30 @@ func NewDoc(id uint, indexes []string, sorts map[string]int) *Doc {
 
 func (d *Doc) ReadMeta(meta *Meta) {
 	meta.Id(d.id)
+	for i := 0; i < len(d.indexes); i += 2 {
+		meta.Index(d.indexes[i], d.indexes[i+1])
+	}
+	for sortName, score := range d.sorts {
+		meta.Sort(sortName, score)
+	}
+}
+
+type StringDoc struct {
+	id      string
+	indexes []string
+	sorts   map[string]int
+}
+
+func NewStringDoc(id string, indexes []string, sorts map[string]int) *StringDoc {
+	return &StringDoc{
+		id:      id,
+		sorts:   sorts,
+		indexes: indexes,
+	}
+}
+
+func (d *StringDoc) ReadMeta(meta *Meta) {
+	meta.StringId(d.id)
 	for i := 0; i < len(d.indexes); i += 2 {
 		meta.Index(d.indexes[i], d.indexes[i+1])
 	}
