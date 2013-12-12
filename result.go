@@ -1,9 +1,5 @@
 package nabu
 
-import (
-	"github.com/karlseguin/nabu/key"
-)
-
 // A query's result. Close must be called once you are done with it
 type Result interface {
 	// The number of documents in the current results
@@ -19,7 +15,7 @@ type Result interface {
 	Docs() []Document
 
 	// The document ids
-	Ids() []key.Type
+	Ids() []uint
 
 	// Releases the result
 	Close()
@@ -29,7 +25,7 @@ type Result interface {
 var EmptyResult = &emptyResult{}
 
 type emptyResult struct {
-	ids       []key.Type
+	ids       []uint
 	documents []Document
 }
 
@@ -45,7 +41,7 @@ func (r *emptyResult) HasMore() bool {
 	return false
 }
 
-func (r *emptyResult) Ids() []key.Type {
+func (r *emptyResult) Ids() []uint {
 	return r.ids
 }
 

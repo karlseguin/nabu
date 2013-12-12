@@ -41,7 +41,7 @@ func (b *Buffer) Write(p []byte) (int, error) {
 
 // Get the buffer's bytes
 func (b *Buffer) Bytes() []byte {
-	return b.bytes[0:b.length]
+	return b.bytes[b.length:]
 }
 
 // Release the buffer back to the pool

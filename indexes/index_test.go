@@ -4,32 +4,31 @@ import (
 	"github.com/karlseguin/gspec"
 	"github.com/karlseguin/nabu/key"
 	"sort"
-	"strconv"
 	"testing"
 )
 
 func TestIndexAddAnItem(t *testing.T) {
 	spec := gspec.New(t)
 	index := New("_")
-	index.Add("leto")
+	index.Add(44)
 	spec.Expect(len(index.Ids)).ToEqual(1)
-	spec.Expect(index.Contains("leto")).ToEqual(true)
+	spec.Expect(index.Contains(44)).ToEqual(true)
 }
 
 func TestIndexCanRemoveNonExistingItem(t *testing.T) {
 	spec := gspec.New(t)
 	index := New("_")
-	index.Add("a")
-	index.Remove("b")
+	index.Add(1)
+	index.Remove(2)
 	spec.Expect(len(index.Ids)).ToEqual(1)
-	spec.Expect(index.Contains("a")).ToEqual(true)
+	spec.Expect(index.Contains(1)).ToEqual(true)
 }
 
 func TestIndexCanRemoveAnItem(t *testing.T) {
 	spec := gspec.New(t)
 	index := New("_")
-	index.Add("a")
-	index.Remove("a")
+	index.Add(1)
+	index.Remove(1)
 	spec.Expect(len(index.Ids)).ToEqual(0)
 }
 
@@ -37,15 +36,15 @@ func TestIndexesAreSortedFromSmallestToLargest(t *testing.T) {
 	spec := gspec.New(t)
 	index1 := New("_")
 	for i := 0; i < 4; i++ {
-		index1.Add(key.Type(strconv.Itoa(i)))
+		index1.Add(key.Type(i))
 	}
 	index2 := New("_")
 	for i := 0; i < 7; i++ {
-		index2.Add(key.Type(strconv.Itoa(i)))
+		index2.Add(key.Type(i))
 	}
 	index3 := New("_")
 	for i := 0; i < 13; i++ {
-		index3.Add(key.Type(strconv.Itoa(i)))
+		index3.Add(key.Type(i))
 	}
 
 	indexes := Indexes{index2, index1, index3}

@@ -33,8 +33,8 @@ func newMeta() *Meta {
 }
 
 // The document's Id
-func (m *Meta) Id(id key.Type) *Meta {
-	m.id = id
+func (m *Meta) Id(id uint) *Meta {
+	m.id = key.Type(id)
 	return m
 }
 

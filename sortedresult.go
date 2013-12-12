@@ -11,14 +11,14 @@ type SortedResult struct {
 	db        *Database
 	hasMore   bool
 	documents []Document
-	ids       []key.Type
+	ids       []uint
 }
 
 func newSortedResult(db *Database) *SortedResult {
 	return &SortedResult{
 		db:        db,
 		found:     0,
-		ids:       make([]key.Type, db.maxLimit),
+		ids:       make([]uint, db.maxLimit),
 		documents: make([]Document, db.maxLimit),
 	}
 }
@@ -35,13 +35,13 @@ func (r *SortedResult) HasMore() bool {
 	return r.hasMore
 }
 
-func (r *SortedResult) Ids() []key.Type {
+func (r *SortedResult) Ids() []uint {
 	return r.ids[0:r.found]
 }
 
 func (r *SortedResult) Docs() []Document {
 	for i := 0; i < r.found; i++ {
-		r.documents[i] = r.db.Get(r.ids[i])
+		r.documents[i] = r.db.Get(key.Type(r.ids[i]))
 	}
 	return r.documents[0:r.found]
 }
@@ -54,7 +54,7 @@ func (r *SortedResult) Close() {
 }
 
 func (r *SortedResult) add(value key.Type) int {
-	r.ids[r.found] = value
+	r.ids[r.found] = uint(value)
 	r.found++
 	return r.found
 }

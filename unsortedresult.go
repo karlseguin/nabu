@@ -12,17 +12,17 @@ type UnsortedResult struct {
 	hasMore   bool
 	db        *Database
 	documents []Document
-	ids       []key.Type
-	original  []key.Type
-	score     map[key.Type]int
+	ids       []uint
+	original  []uint
+	score     map[uint]int
 }
 
 func newUnsortedResult(db *Database) *UnsortedResult {
 	r := &UnsortedResult{
 		db:       db,
 		found:    0,
-		original: make([]key.Type, db.maxUnsortedSize),
-		score:    make(map[key.Type]int, db.maxUnsortedSize),
+		original: make([]uint, db.maxUnsortedSize),
+		score:    make(map[uint]int, db.maxUnsortedSize),
 	}
 	min := db.maxUnsortedSize
 	if db.maxLimit < min {
@@ -44,20 +44,21 @@ func (r *UnsortedResult) HasMore() bool {
 	return r.hasMore
 }
 
-func (r *UnsortedResult) Ids() []key.Type {
+func (r *UnsortedResult) Ids() []uint {
 	return r.ids[0:r.found]
 }
 
 func (r *UnsortedResult) Docs() []Document {
 	for i := 0; i < r.found; i++ {
-		r.documents[i] = r.db.Get(r.ids[i])
+		r.documents[i] = r.db.Get(key.Type(r.ids[i]))
 	}
 	return r.documents[0:r.found]
 }
 
 func (r *UnsortedResult) add(value key.Type, score int) {
-	r.original[r.found] = value
-	r.score[value] = score
+	v := uint(value)
+	r.original[r.found] = v
+	r.score[v] = score
 	r.found++
 }
 

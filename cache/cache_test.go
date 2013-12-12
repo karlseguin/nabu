@@ -44,14 +44,14 @@ type FakeFetcher struct {
 func newFetcher() *FakeFetcher {
 	f := new(FakeFetcher)
 	f.indexA = indexes.New("A")
-	f.indexA.Add("a")
-	f.indexA.Add("b")
-	f.indexA.Add("c")
-	f.indexA.Add("d")
+	f.indexA.Add(1)
+	f.indexA.Add(2)
+	f.indexA.Add(3)
+	f.indexA.Add(4)
 	f.indexB = indexes.New("B")
-	f.indexB.Add("z")
-	f.indexB.Add("b")
-	f.indexB.Add("d")
+	f.indexB.Add(10)
+	f.indexB.Add(2)
+	f.indexB.Add(4)
 	return f
 }
 
