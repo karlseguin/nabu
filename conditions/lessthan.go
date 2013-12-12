@@ -20,7 +20,7 @@ func (c *LessThan) On(index indexes.Index) {
 }
 
 func (c *LessThan) Len() int {
-	return c.index.GetRank(c.Value-1, false)
+	return c.index.GetRank(c.Value, false)
 }
 
 func (c *LessThan) Contains(id key.Type) bool {
