@@ -11,7 +11,8 @@ type Configuration struct {
 	maxTotal               int
 	skipLoad               bool
 	dbPath                 string
-	factory                Factory
+	iFactory               IntFactory
+	sFactory StringFactory
 	bucketCount            int
 	defaultLimit           int
 	cacheWorkers           int
@@ -20,14 +21,11 @@ type Configuration struct {
 	maxIndexesPerQuery     int
 	sortedResultPoolSize   int
 	unsortedResultPoolSize int
-	aggregatable           map[string]bool
 	maxCacheStaleness      time.Duration
 }
 
-// Begins the configuration process. The mandatory factory deserializes
-// a document from its persisted []byte representation to your custom
-// models. Objects are serialized as JSON
-func Configure(factory Factory) *Configuration {
+// Begins the configuration process.
+func Configure() *Configuration {
 	return &Configuration{
 		maxLimit:               100,
 		maxTotal:               1000,
@@ -35,14 +33,12 @@ func Configure(factory Factory) *Configuration {
 		bucketCount:            25,
 		cacheWorkers:           2,
 		defaultLimit:           10,
-		factory:                factory,
 		dbPath:                 "./data/",
 		queryPoolSize:          512,
 		maxUnsortedSize:        5000,
 		maxIndexesPerQuery:     10,
 		sortedResultPoolSize:   512,
 		unsortedResultPoolSize: 512,
-		aggregatable:           make(map[string]bool),
 		maxCacheStaleness:      time.Minute * 10,
 	}
 }
@@ -130,10 +126,14 @@ func (c *Configuration) MaxCacheStaleness(duration time.Duration) *Configuration
 	return c
 }
 
-// Indicates that the index can be used in aggregate functions (like Distinct).
-func (c *Configuration) Aggregatable(indexNames ...string) *Configuration {
-	for _, name := range indexNames {
-		c.aggregatable[name] = true
-	}
+// Instructs the database to not load data from disk on startup
+func (c *Configuration) StringFactory(factory StringFactory) *Configuration {
+	c.sFactory = factory
+	return c
+}
+
+// Instructs the database to not load data from disk on startup
+func (c *Configuration) IntFactory(factory IntFactory) *Configuration {
+	c.iFactory = factory
 	return c
 }

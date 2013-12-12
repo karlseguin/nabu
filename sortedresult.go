@@ -39,7 +39,7 @@ func (r *SortedResult) Ids() []uint {
 	return r.ids[0:r.found]
 }
 
-func (r *SortedResult) Docs() []Document {
+func (r *SortedResult) Documents() []Document {
 	for i := 0; i < r.found; i++ {
 		r.documents[i] = r.db.Get(r.ids[i])
 	}

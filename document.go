@@ -22,19 +22,18 @@ type Document interface {
 type Meta struct {
 	uintId   uint
 	stringId string
-	sorts    map[string]int
-	indexes  map[string][]string
+
+	iIndexes    map[string]int
 }
 
 func newMeta() *Meta {
 	return &Meta{
-		sorts:   make(map[string]int),
-		indexes: make(map[string][]string),
+		iIndexes:   make(map[string]int),
 	}
 }
 
 // The document's Id
-func (m *Meta) Id(id uint) *Meta {
+func (m *Meta) IntId(id uint) *Meta {
 	m.uintId = id
 	return m
 }
@@ -45,25 +44,15 @@ func (m *Meta) StringId(id string) *Meta {
 	return m
 }
 
-func (m *Meta) getId(idMap *IdMap) key.Type {
+func (m *Meta) getId(idMap *IdMap) (key.Type, string) {
 	if len(m.stringId) == 0 {
-		return key.Type(m.uintId)
+		return key.Type(m.uintId), ""
 	}
-	return idMap.get(m.stringId, true)
+	return idMap.get(m.stringId, true), m.stringId
 }
 
-// A document's index and value. Can be called multiple times
-func (m *Meta) Index(indexName, value string) *Meta {
-	index, exists := m.indexes[indexName]
-	if exists == false {
-		index = make([]string, 0, 1)
-	}
-	m.indexes[indexName] = append(index, value)
-	return m
-}
-
-// A document's sort and score. Can be called Multiple times
-func (m *Meta) Sort(name string, score int) *Meta {
-	m.sorts[name] = score
+// Add an int-based index
+func (m *Meta) IndexInt(name string, score int) *Meta {
+	m.iIndexes[name] = score
 	return m
 }

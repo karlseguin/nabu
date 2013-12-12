@@ -17,11 +17,11 @@ type Query struct {
 	sortLength   int
 	indexCount   int
 	includeTotal bool
-	sort         indexes.Sort
-	from         int
-	to           int
+	sort         indexes.Index
 	ranged       bool
 	indexNames   []string
+	conditions   []Condition
+	sets         Sets
 	indexes      indexes.Indexes
 }
 
@@ -30,8 +30,10 @@ func newQuery(db *Database) *Query {
 	q := &Query{
 		db:         db,
 		cache:      true,
+		sets:    make(Sets, db.maxIndexesPerQuery),
 		indexes:    make(indexes.Indexes, db.maxIndexesPerQuery),
 		indexNames: make([]string, db.maxIndexesPerQuery),
+		conditions: make([]Condition, db.maxIndexesPerQuery),
 	}
 	q.reset()
 	return q
@@ -40,14 +42,12 @@ func newQuery(db *Database) *Query {
 // Filter results for the query and value. Where can be called multiple
 // times. Each must have an even number of parameters (indexName, value):
 //
-//    Where("type", "dog", "size", "small").Where("color", "white")
+//    Where("age", nabu.GT(10))
 //
-func (q *Query) Where(params ...string) *Query {
-	l := len(params)
-	for i := 0; i < l; i += 2 {
-		q.indexNames[q.indexCount+(i/2)] = params[i] + "$" + params[i+1]
-	}
-	q.indexCount += l / 2
+func (q *Query) Where(indexName string, condition Condition) *Query {
+	q.indexNames[q.indexCount] = indexName
+	q.conditions[q.indexCount] = condition
+	q.indexCount++
 	return q
 }
 
@@ -99,53 +99,57 @@ func (q *Query) IncludeTotal() *Query {
 func (q *Query) Execute() Result {
 	defer q.reset()
 	indexCount := q.indexCount
-	q.sortLength = q.sort.Len()
 	if indexCount == 0 {
 		return q.findWithNoIndexes()
 	}
-	if indexCount > 1 && q.cache == true {
-		if cached, ok := q.db.cache.Get(q.indexNames[0:indexCount]); ok {
-			q.indexCount = 1
-			cached.RLock()
-			defer cached.RUnlock()
-			return q.execute(cached)
-		}
-	}
 
-	indexes := q.loadIndexes()
-	if indexes == nil {
+	// q.sortLength = q.sort.Len()
+
+	// if indexCount == 0 {
+	// 	return q.findWithNoIndexes()
+	// }
+	// if indexCount > 1 && q.cache == true {
+	// 	if cached, ok := q.db.cache.Get(q.indexNames[0:indexCount]); ok {
+	// 		q.indexCount = 1
+	// 		cached.RLock()
+	// 		defer cached.RUnlock()
+	// 		return q.execute(cached)
+	// 	}
+	// }
+
+	if q.loadSets() == false {
 		return EmptyResult
 	}
-	indexes.RLock()
-	defer indexes.RUnlock()
-	return q.execute(indexes)
+	return q.execute()
 }
 
 // Loads the indexes used by the query
-func (q *Query) loadIndexes() indexes.Indexes {
-	if q.db.LookupIndexes(q.indexNames[0:q.indexCount], q.indexes) == false {
-		return nil
+func (q *Query) loadSets() bool {
+	indexCount := q.indexCount
+	if q.db.LookupIndexes(q.indexNames[0:indexCount], q.indexes) == false {
+		return false
 	}
-	indexes := q.indexes[0:q.indexCount]
-	if q.indexCount > 1 {
-		sort.Sort(indexes)
+	for i := 0; i < indexCount; i++ {
+		q.sets[i] = q.conditions[i].Apply(q.indexes[i])
 	}
-	return indexes
+	if indexCount > 1 {
+		sort.Sort(q.sets[0:indexCount])
+	}
+	return true
 }
 
 // Determines wither an index-based query will be used or a sort-based query.
 // The choice is based on the type of sort index (whether it can rank documents),
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.
-func (q *Query) execute(indexes indexes.Indexes) Result {
-	firstLength := indexes[0].Len()
-	if firstLength == 0 {
+func (q *Query) execute() Result {
+	if len(q.sets[0]) == 0 {
 		return EmptyResult
 	}
-	if q.sort.CanScore() && q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
-		return q.findByIndex(indexes)
-	}
-	return q.findBySort(indexes)
+	return q.findBySort()
+	// if q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
+	// 	return q.findByIndex(indexes)
+	// }
 }
 
 // An optimized code path for when no index is provided (just walking through
@@ -159,9 +163,6 @@ func (q *Query) findWithNoIndexes() Result {
 		iterator = q.sort.Backwards()
 	} else {
 		iterator = q.sort.Forwards()
-	}
-	if q.ranged {
-		iterator.Range(q.from, q.to)
 	}
 	iterator.Offset(q.offset)
 
@@ -182,28 +183,8 @@ func (q *Query) findWithNoIndexes() Result {
 	return result
 }
 
-// Filter by indexes, then sort. Ideal when the smallest index is quite a bit
-// smaller than the sort index
-func (q *Query) findByIndex(indexes indexes.Indexes) Result {
-	first := indexes[0]
-	indexCount := len(indexes)
-	result := <-q.db.unsortedResults
-	for id, _ := range first.Ids() {
-		for j := 1; j < indexCount; j++ {
-			if indexes[j].Contains(id) == false {
-				goto nomatch
-			}
-		}
-		if score, exists := q.sort.GetScore(id); exists && (!q.ranged || (score >= q.from && score <= q.to)) {
-			result.add(id, score)
-		}
-	nomatch:
-	}
-	return result.finalize(q)
-}
-
 // Walk the sort index and filter out results
-func (q *Query) findBySort(idx indexes.Indexes) Result {
+func (q *Query) findBySort() Result {
 	found := 0
 	limit := q.limit
 	indexCount := q.indexCount
@@ -215,13 +196,11 @@ func (q *Query) findBySort(idx indexes.Indexes) Result {
 	} else {
 		iterator = q.sort.Forwards()
 	}
-	if q.ranged {
-		iterator.Range(q.from, q.to)
-	}
 
+	sets := q.sets
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < indexCount; j++ {
-			if idx[j].Contains(id) == false {
+			if _, exists := sets[j][id]; exists == false {
 				goto nomatchdesc
 			}
 		}

@@ -48,7 +48,7 @@ func (r *UnsortedResult) Ids() []uint {
 	return r.ids[0:r.found]
 }
 
-func (r *UnsortedResult) Docs() []Document {
+func (r *UnsortedResult) Documents() []Document {
 	for i := 0; i < r.found; i++ {
 		r.documents[i] = r.db.Get(r.ids[i])
 	}

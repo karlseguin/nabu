@@ -26,7 +26,7 @@ func (t Type) Serialize() BytesCloser {
 }
 
 // Deserializes the key from storage
-func Deserialize(raw []byte) Type {
+func Deserialize(raw []byte) uint {
 	value, _ := binary.Uvarint(raw)
-	return Type(value)
+	return uint(value)
 }

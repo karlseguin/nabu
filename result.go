@@ -12,7 +12,7 @@ type Result interface {
 	HasMore() bool
 
 	// The actual documents
-	Docs() []Document
+	Documents() []Document
 
 	// The document ids
 	Ids() []uint
@@ -45,7 +45,7 @@ func (r *emptyResult) Ids() []uint {
 	return r.ids
 }
 
-func (r *emptyResult) Docs() []Document {
+func (r *emptyResult) Documents() []Document {
 	return r.documents
 }
 

@@ -6,63 +6,41 @@ import (
 )
 
 type Index interface {
-	Add(id key.Type)
-	Remove(id key.Type) int
 	Name() string
 	Len() int
-	Contains(id key.Type) bool
-	Ids() map[key.Type]struct{}
-
+	SetInt(id key.Type, score int)
+	Remove(id key.Type) int
+	Contains(id key.Type) (int, bool)
 	RLock()
 	RUnlock()
+
+	Forwards() Iterator
+	Backwards() Iterator
 }
+
+// Interface used to iterate over a sorted index.
+//
+// Note that Next advances then returns the next value
+//
+// Iteration returns key.NULL when done
+type Iterator interface {
+	Next() key.Type
+	Current() key.Type
+	Offset(offset int) Iterator
+	Range(from, to int) Iterator
+	Close()
+}
+
 
 // Creates the index
 func NewIndex(name string) Index {
-	return &SimpleIndex{
-		name: name,
-		ids:  make(map[key.Type]struct{}),
-	}
+	return newSkiplist(name)
 }
 
 // Creates the index
-func LoadIndex(name string, ids map[key.Type]struct{}) Index {
-	return &SimpleIndex{
-		name: name,
-		ids:  ids,
-	}
+func LoadIndex(name string, values map[key.Type]int) Index {
+	return loadSkiplist(name, values)
 }
 
 // An array of indexes
 type Indexes []Index
-
-// The number of items in our array of indexes
-func (indexes Indexes) Len() int {
-	return len(indexes)
-}
-
-// Used to sort an array based on length
-func (indexes Indexes) Less(i, j int) bool {
-	return indexes[i].Len() < indexes[j].Len()
-}
-
-// Used to sort an array based on length
-func (indexes Indexes) Swap(i, j int) {
-	x := indexes[i]
-	indexes[i] = indexes[j]
-	indexes[j] = x
-}
-
-// Read locks all indexes within the array
-func (indexes Indexes) RLock() {
-	for _, index := range indexes {
-		index.RLock()
-	}
-}
-
-// Read unlocks all indexes within the array
-func (indexes Indexes) RUnlock() {
-	for _, index := range indexes {
-		index.RUnlock()
-	}
-}
