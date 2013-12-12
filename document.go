@@ -20,10 +20,10 @@ type Document interface {
 
 // Meta describes a document
 type Meta struct {
-	uintId      uint
+	uintId   uint
 	stringId string
-	sorts   map[string]int
-	indexes map[string][]string
+	sorts    map[string]int
+	indexes  map[string][]string
 }
 
 func newMeta() *Meta {

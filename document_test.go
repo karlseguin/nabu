@@ -19,7 +19,6 @@ func TestMetaCanBeSet(t *testing.T) {
 	spec.Expect(values[1]).ToEqual("leto")
 }
 
-
 func TestMetaCanBeSetWithStringId(t *testing.T) {
 	spec := gspec.New(t)
 	meta := newMeta()

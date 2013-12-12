@@ -57,7 +57,7 @@ type Database struct {
 	dStorage        storage.Storage
 	indexLock       sync.RWMutex
 	indexValueLock  sync.RWMutex
-	idMap *IdMap
+	idMap           *IdMap
 	sorts           map[string]indexes.Sort
 	indexValues     map[string][]string
 	sortedResults   chan *SortedResult
@@ -79,7 +79,7 @@ func New(c *Configuration) *Database {
 		buckets:         make(map[int]*Bucket, c.bucketCount),
 		sortedResults:   make(chan *SortedResult, c.sortedResultPoolSize),
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
-		idMap: newIdMap(),
+		idMap:           newIdMap(),
 	}
 	db.cache = cache.New(db, db.cacheWorkers, db.maxCacheStaleness)
 	for i := 0; i < int(c.bucketCount); i++ {
