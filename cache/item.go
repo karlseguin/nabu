@@ -3,6 +3,7 @@ package cache
 import (
 	"container/list"
 	"github.com/karlseguin/nabu/indexes"
+	"github.com/karlseguin/nabu/key"
 	"sort"
 	"sync"
 	"time"
@@ -63,19 +64,21 @@ func (item *Item) build() {
 	sort.Sort(item.sources)
 	idx := item.sources
 	first := idx[0]
-	cached := indexes.New(item.key)
-	indexCount := len(item.sources)
 
-	for id, _ := range first.Ids {
+	indexCount := len(item.sources)
+	set := make(map[key.Type]struct{})
+	for id, _ := range first.Ids() {
 		for j := 1; j < indexCount; j++ {
-			if _, exists := idx[j].Ids[id]; exists == false {
+			if idx[j].Contains(id) == false {
 				goto nomatch
 			}
 		}
-		cached.Ids[id] = struct{}{}
+		set[id] = struct{}{}
 	nomatch:
 	}
-	item.index[0] = cached
+	// cached := indexes.NewIndex(item.key)
+
+	item.index[0] = indexes.LoadIndex(item.key, set)
 	item.Lock()
 	item.promoted = time.Now().Add(time.Minute * -60)
 	item.Unlock()
@@ -100,7 +103,7 @@ func (item *Item) added(change *Change) {
 	defer indexes.RUnlock()
 	indexCount := len(indexes)
 	for i := 0; i < indexCount; i++ {
-		if _, exists := indexes[i].Ids[id]; exists == false {
+		if indexes[i].Contains(id) == false {
 			return
 		}
 	}

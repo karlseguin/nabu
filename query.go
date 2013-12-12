@@ -138,7 +138,7 @@ func (q *Query) loadIndexes() indexes.Indexes {
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.
 func (q *Query) execute(indexes indexes.Indexes) Result {
-	firstLength := len(indexes[0].Ids)
+	firstLength := indexes[0].Len()
 	if firstLength == 0 {
 		return EmptyResult
 	}
@@ -188,9 +188,9 @@ func (q *Query) findByIndex(indexes indexes.Indexes) Result {
 	first := indexes[0]
 	indexCount := len(indexes)
 	result := <-q.db.unsortedResults
-	for id, _ := range first.Ids {
+	for id, _ := range first.Ids() {
 		for j := 1; j < indexCount; j++ {
-			if _, exists := indexes[j].Ids[id]; exists == false {
+			if indexes[j].Contains(id) == false {
 				goto nomatch
 			}
 		}
@@ -221,7 +221,7 @@ func (q *Query) findBySort(idx indexes.Indexes) Result {
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < indexCount; j++ {
-			if _, exists := idx[j].Ids[id]; exists == false {
+			if idx[j].Contains(id) == false {
 				goto nomatchdesc
 			}
 		}

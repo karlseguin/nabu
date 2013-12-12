@@ -164,7 +164,7 @@ func SmallDB() *Database {
 	db := New(SmallConfig())
 	defer db.Close()
 	db.LoadSort("created", []key.Type{}, false)
-	addIndex(db, "age$29", indexes.New("age$29"))
+	addIndex(db, indexes.NewIndex("age$29"))
 	return db
 }
 
@@ -172,7 +172,6 @@ func SmallConfig() *Configuration {
 	return Configure(nil).QueryPoolSize(1).ResultsPoolSize(1, 1).CacheWorkers(0).SkipLoad()
 }
 
-func addIndex(db *Database, name string, index *indexes.Index) {
-	index.Name = name
-	db.indexes[name] = index
+func addIndex(db *Database, index indexes.Index) {
+	db.indexes[index.Name()] = index
 }

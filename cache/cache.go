@@ -133,7 +133,7 @@ func (c *Cache) reverseIndex(item *Item) {
 	c.bucketLock.Lock()
 	defer c.bucketLock.Unlock()
 	for _, index := range item.sources {
-		name := index.Name
+		name := index.Name()
 		bucket, exists := c.buckets[name]
 		if exists == false {
 			bucket = newChangeBucket(name)
@@ -196,7 +196,7 @@ func (c *Cache) gc(maxStaleness time.Duration) {
 		delete(c.lookup, item.key)
 		c.Unlock()
 		for _, index := range item.sources {
-			name := index.Name
+			name := index.Name()
 			if bucket, exists := c.buckets[name]; exists {
 				bucket.remove(item)
 			}

@@ -61,7 +61,7 @@ type Database struct {
 	sorts           map[string]indexes.Sort
 	indexValues     map[string][]string
 	sortedResults   chan *SortedResult
-	indexes         map[string]*indexes.Index
+	indexes         map[string]indexes.Index
 	unsortedResults chan *UnsortedResult
 }
 
@@ -72,7 +72,7 @@ func New(c *Configuration) *Database {
 		Configuration:   c,
 		sorts:           make(map[string]indexes.Sort),
 		indexValues:     make(map[string][]string),
-		indexes:         make(map[string]*indexes.Index),
+		indexes:         make(map[string]indexes.Index),
 		iStorage:        storage.New(c.dbPath + "indexes"),
 		dStorage:        storage.New(c.dbPath + "documents"),
 		queryPool:       make(chan *Query, c.queryPoolSize),
@@ -342,7 +342,7 @@ func (d *Database) addDocumentIndex(baseName string, values []string, id key.Typ
 			d.indexLock.Lock()
 			index, exists = d.indexes[indexName]
 			if exists == false {
-				index = indexes.New(indexName)
+				index = indexes.NewIndex(indexName)
 				d.indexes[indexName] = index
 			}
 			d.indexLock.Unlock()

@@ -3,56 +3,38 @@ package indexes
 
 import (
 	"github.com/karlseguin/nabu/key"
-	"sync"
 )
 
-// A non-sorted index (essentially a set)
-type Index struct {
-	sync.RWMutex
-	Name string
-	Ids  map[key.Type]struct{}
+type Index interface {
+	Add(id key.Type)
+	Remove(id key.Type) int
+	Name() string
+	Len() int
+	Contains(id key.Type) bool
+	Ids() map[key.Type]struct{}
+
+	RLock()
+	RUnlock()
 }
 
 // Creates the index
-func New(name string) *Index {
-	return &Index{
-		Name: name,
-		Ids:  make(map[key.Type]struct{}),
+func NewIndex(name string) Index {
+	return &SimpleIndex{
+		name: name,
+		ids:  make(map[key.Type]struct{}),
 	}
 }
 
-// Add an id to the index
-func (i *Index) Add(id key.Type) {
-	i.Lock()
-	defer i.Unlock()
-	i.Ids[id] = struct{}{}
-}
-
-// Remove an id from the index
-func (i *Index) Remove(id key.Type) int {
-	i.Lock()
-	defer i.Unlock()
-	delete(i.Ids, id)
-	return len(i.Ids)
-}
-
-// Determine whether or not the index contains an item
-func (i *Index) Contains(id key.Type) bool {
-	i.RLock()
-	defer i.RUnlock()
-	_, exists := i.Ids[id]
-	return exists
-}
-
-// Number of documents in the index
-func (i *Index) Len() int {
-	i.RLock()
-	defer i.RUnlock()
-	return len(i.Ids)
+// Creates the index
+func LoadIndex(name string, ids map[key.Type]struct{}) Index {
+	return &SimpleIndex{
+		name: name,
+		ids:  ids,
+	}
 }
 
 // An array of indexes
-type Indexes []*Index
+type Indexes []Index
 
 // The number of items in our array of indexes
 func (indexes Indexes) Len() int {
@@ -61,7 +43,7 @@ func (indexes Indexes) Len() int {
 
 // Used to sort an array based on length
 func (indexes Indexes) Less(i, j int) bool {
-	return len(indexes[i].Ids) < len(indexes[j].Ids)
+	return indexes[i].Len() < indexes[j].Len()
 }
 
 // Used to sort an array based on length
