@@ -19,6 +19,10 @@ func (c *GreaterThan) On(index indexes.Index) {
 	c.index = index
 }
 
+func (c *GreaterThan) Range() (int, int) {
+	return c.Value + 1, indexes.MAX
+}
+
 func (c *GreaterThan) Len() int {
 	return c.index.Len() - c.index.GetRank(c.Value+1, true)
 }

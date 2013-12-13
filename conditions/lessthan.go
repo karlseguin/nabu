@@ -19,6 +19,10 @@ func (c *LessThan) On(index indexes.Index) {
 	c.index = index
 }
 
+func (c *LessThan) Range() (int, int) {
+	return indexes.MIN, c.Value - 1
+}
+
 func (c *LessThan) Len() int {
 	return c.index.GetRank(c.Value, false)
 }

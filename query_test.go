@@ -2,10 +2,6 @@ package nabu
 
 import (
 	"github.com/karlseguin/gspec"
-	"github.com/karlseguin/nabu/indexes"
-	"github.com/karlseguin/nabu/key"
-	"math/rand"
-	"strconv"
 	"testing"
 )
 
@@ -63,6 +59,15 @@ func TestQueryWithNoIndexesDescending(t *testing.T) {
 	result := db.Query("created").Desc().Execute()
 	defer result.Close()
 	assertResult(t, result.Ids(), 7, 6, 5, 4, 3, 2, 1)
+}
+
+func TestQueryWithNoIndexesDescendingWithFilter(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
+	result := db.Query("created").Where("created", GT(4)).Desc().Execute()
+	defer result.Close()
+	assertResult(t, result.Ids(), 7, 6, 5)
 }
 
 func TestQueryWithNoIndexWithOffset(t *testing.T) {
@@ -169,6 +174,15 @@ func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
 	spec.Expect(result.Total()).ToEqual(4)
 }
 
+func TestQueryWithNoIndexesWithFilter(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
+	result := db.Query("created").Where("created", GT(4)).Execute()
+	defer result.Close()
+	assertResult(t, result.Ids(), 5, 6, 7)
+}
+
 func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
 	spec := gspec.New(t)
 	db := New(SmallConfig().CacheWorkers(0).MaxTotal(4))
@@ -188,6 +202,16 @@ func TestQueryWithASingleIndexBySort(t *testing.T) {
 	result := db.Query("created").NoCache().Where("a", GT(1)).Execute()
 	defer result.Close()
 	assertResult(t, result.Ids(), 2, 3, 6, 8)
+}
+
+func TestQueryWithASingleIndexByFilteredSort(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+	makeIndex(db, "a", 2, 3, 6, 8, 100)
+	result := db.Query("created").NoCache().Where("created", LT(8)).Where("a", GT(1)).Execute()
+	defer result.Close()
+	assertResult(t, result.Ids(), 2, 3, 6)
 }
 
 func TestQueryWithTwoIndexesBySort(t *testing.T) {
@@ -210,6 +234,16 @@ func TestQueryBySortDescending(t *testing.T) {
 	result := db.Query("created").NoCache().Where("a", GT(1)).Where("b", GT(3)).Desc().Execute()
 	defer result.Close()
 	assertResult(t, result.Ids(), 11, 8)
+}
+
+func TestQuerWithFilterHavingFilteredSortDesc(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+	makeIndex(db, "a", 2, 3, 6, 8, 100)
+	result := db.Query("created").NoCache().Where("created", GT(2)).Where("a", GT(1)).Desc().Execute()
+	defer result.Close()
+	assertResult(t, result.Ids(), 8, 6, 3)
 }
 
 func TestQueryWithTwoIndexesBySortWithOffset(t *testing.T) {

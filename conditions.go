@@ -12,6 +12,7 @@ type Condition interface {
 	Len() int
 	On(index indexes.Index)
 	Contains(id key.Type) bool
+	Range() (int, int)
 }
 
 // An array of condition

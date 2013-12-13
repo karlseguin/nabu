@@ -19,6 +19,10 @@ func (c *Equal) On(index indexes.Index) {
 	c.index = index
 }
 
+func (c *Equal) Range() (int, int) {
+	return c.Value, c.Value
+}
+
 //can optimize this
 func (c *Equal) Len() int {
 	return c.index.GetRank(c.Value, false) - c.index.GetRank(c.Value, true) + 1

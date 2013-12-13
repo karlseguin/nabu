@@ -8,20 +8,21 @@ import (
 
 // Build and executes a query against the database
 type Query struct {
-	upto         int
-	limit        int
-	desc         bool
-	offset       int
-	cache        bool
-	db           *Database
-	sortLength   int
-	indexCount   int
-	includeTotal bool
-	sort         indexes.Index
-	ranged       bool
-	indexNames   []string
-	conditions   Conditions
-	indexes      indexes.Indexes
+	upto          int
+	limit         int
+	desc          bool
+	offset        int
+	cache         bool
+	db            *Database
+	sortLength    int
+	indexCount    int
+	includeTotal  bool
+	sortCondition Condition
+	sort          indexes.Index
+	ranged        bool
+	indexNames    []string
+	conditions    Conditions
+	indexes       indexes.Indexes
 }
 
 // Queries are statically created upfront and reused
@@ -43,9 +44,13 @@ func newQuery(db *Database) *Query {
 //    Where("age", nabu.GT(10))
 //
 func (q *Query) Where(indexName string, condition Condition) *Query {
-	q.indexNames[q.indexCount] = indexName
-	q.conditions[q.indexCount] = condition
-	q.indexCount++
+	if indexName == q.sort.Name() {
+		q.sortCondition = condition
+	} else {
+		q.indexNames[q.indexCount] = indexName
+		q.conditions[q.indexCount] = condition
+		q.indexCount++
+	}
 	return q
 }
 
@@ -161,6 +166,9 @@ func (q *Query) findWithNoIndexes() Result {
 	} else {
 		iterator = q.sort.Forwards()
 	}
+	if q.sortCondition != nil {
+		iterator.Range(q.sortCondition.Range())
+	}
 	iterator.Offset(q.offset)
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
@@ -192,6 +200,9 @@ func (q *Query) findBySort() Result {
 		iterator = q.sort.Backwards()
 	} else {
 		iterator = q.sort.Forwards()
+	}
+	if q.sortCondition != nil {
+		iterator.Range(q.sortCondition.Range()).Offset(0)
 	}
 
 	indexes := q.indexes[0:indexCount]
@@ -231,6 +242,7 @@ func (q *Query) reset() {
 	q.indexCount = 0
 	q.ranged = false
 	q.includeTotal = false
+	q.sortCondition = nil
 	q.limit = q.db.defaultLimit
 	q.upto = q.db.defaultLimit + 1
 	q.db.queryPool <- q

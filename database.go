@@ -148,7 +148,7 @@ func (d *Database) Update(doc Document) {
 		d.getOrCreateIndex(name).Remove(id)
 	}
 
-	if d.loading == false {
+	if false && d.loading == false {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
 		d.dStorage.Put(idBuffer.Bytes(), serializeValue(doc))

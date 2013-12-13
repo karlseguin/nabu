@@ -5,6 +5,9 @@ import (
 	"github.com/karlseguin/nabu/key"
 )
 
+const MAX = 9223372036854775807
+const MIN = -9223372036854775807
+
 type Index interface {
 	Name() string
 	Len() int
