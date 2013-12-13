@@ -101,6 +101,16 @@ func (q *Query) IncludeTotal() *Query {
 // once you are done with it
 func (q *Query) Execute() Result {
 	defer q.reset()
+
+	q.sort.RLock()
+	if q.sortCondition != nil {
+		q.sortCondition.On(q.sort)
+		q.sortLength = q.sortCondition.Len()
+	} else {
+		q.sortLength = q.sort.Len()
+	}
+	q.sort.RUnlock()
+
 	indexCount := q.indexCount
 	if indexCount == 0 {
 		return q.findWithNoIndexes()
@@ -134,12 +144,14 @@ func (q *Query) prepareConditions() bool {
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.
 func (q *Query) execute() Result {
-	if q.conditions[0].Len() == 0 {
+	firstLength := q.conditions[0].Len()
+	if firstLength == 0 {
 		return EmptyResult
 	}
-	// if q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
-	// 	return q.findByIndex(indexes)
-	// }
+
+	if q.sortLength > firstLength*5 && firstLength <= q.db.maxUnsortedSize {
+		return q.findByIndex()
+	}
 	return q.findBySort()
 }
 
@@ -155,7 +167,6 @@ func (q *Query) findWithNoIndexes() Result {
 	} else {
 		iterator = q.sort.Forwards()
 	}
-	defer iterator.Close()
 	if q.sortCondition != nil {
 		iterator.Range(q.sortCondition.Range())
 	}
@@ -168,13 +179,10 @@ func (q *Query) findWithNoIndexes() Result {
 		}
 	}
 	result.hasMore = id != key.NULL && iterator.Next() != key.NULL
+	iterator.Close()
+
 	if q.includeTotal {
-		if q.sortCondition != nil {
-			q.sortCondition.On(q.sort)
-			result.total = q.sortCondition.Len()
-		} else {
-			result.total = q.sort.Len()
-		}
+		result.total = q.sortLength
 		if result.total > q.upto {
 			result.total = q.upto
 		}
@@ -201,7 +209,7 @@ func (q *Query) findBySort() Result {
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < indexCount; j++ {
-			if q.conditions[j].Contains(id) == false {
+			if _, exists := q.conditions[j].Contains(id); exists == false {
 				goto nomatchdesc
 			}
 		}
@@ -222,6 +230,37 @@ func (q *Query) findBySort() Result {
 		result.total = -1
 	}
 	return result
+}
+
+// Filter by indexes, then sort. Ideal when the smallest index is quite a bit
+// smaller than the sort index
+func (q *Query) findByIndex() Result {
+	indexCount := q.indexCount
+	result := <-q.db.unsortedResults
+
+	var sort Container
+	if q.sortCondition != nil {
+		q.sortCondition.On(q.sort)
+		sort = q.sortCondition
+	} else {
+		sort = q.sort
+	}
+
+	iterator := q.conditions[0].Iterator()
+	defer iterator.Close()
+
+	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
+		for j := 1; j < indexCount; j++ {
+			if _, exists := q.conditions[j].Contains(id); exists == false {
+				goto nomatch
+			}
+		}
+		if score, exists := sort.Contains(id); exists {
+			result.add(id, score)
+		}
+	nomatch:
+	}
+	return result.finalize(q)
 }
 
 // Reset the query and release it back into the pool

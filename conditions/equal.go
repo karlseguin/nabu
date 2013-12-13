@@ -39,9 +39,14 @@ func (c *Equal) Len() int {
 	return c.length
 }
 
-func (c *Equal) Contains(id key.Type) bool {
+func (c *Equal) Contains(id key.Type) (int, bool) {
 	if score, exists := c.index.Contains(id); exists && score == c.value {
-		return true
+		return score, true
 	}
-	return false
+	return 0, false
+}
+
+func (c *Equal) Iterator() indexes.Iterator {
+	iterator := c.index.Forwards()
+	return iterator.Range(c.Range()).Offset(0)
 }

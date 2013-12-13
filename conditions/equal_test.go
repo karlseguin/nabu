@@ -26,26 +26,31 @@ func TestEqualDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
 	eq := NewEqual(10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	spec.Expect(eq.Contains(key.Type(22))).ToEqual(false)
+	_, exists := eq.Contains(key.Type(22))
+	spec.Expect(exists).ToEqual(false)
 }
 
 func TestEqualDoesNotContainAnIdWithAScoreGreaterThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
 	eq := NewEqual(10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	spec.Expect(eq.Contains(key.Type(4))).ToEqual(false)
+	_, exists := eq.Contains(key.Type(4))
+	spec.Expect(exists).ToEqual(false)
 }
 
 func TestEqualDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
 	eq := NewEqual(10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	spec.Expect(eq.Contains(key.Type(2))).ToEqual(false)
+	_, exists := eq.Contains(key.Type(2))
+	spec.Expect(exists).ToEqual(false)
 }
 
 func TestEqualContainsAnIdWithAScoreEqualOurTarget(t *testing.T) {
 	spec := gspec.New(t)
 	eq := NewEqual(10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	spec.Expect(eq.Contains(key.Type(3))).ToEqual(true)
+	score, exists := eq.Contains(key.Type(3))
+	spec.Expect(score).ToEqual(10)
+	spec.Expect(exists).ToEqual(true)
 }

@@ -38,9 +38,14 @@ func (c *LessThan) Len() int {
 	return c.length
 }
 
-func (c *LessThan) Contains(id key.Type) bool {
+func (c *LessThan) Contains(id key.Type) (int, bool) {
 	if score, exists := c.index.Contains(id); exists && score < c.value {
-		return true
+		return score, true
 	}
-	return false
+	return 0, false
+}
+
+func (c *LessThan) Iterator() indexes.Iterator {
+	iterator := c.index.Forwards()
+	return iterator.Range(c.Range()).Offset(0)
 }

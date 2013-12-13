@@ -6,13 +6,18 @@ import (
 	"github.com/karlseguin/nabu/key"
 )
 
+type Container interface {
+	Contains(id key.Type) (int, bool)
+}
+
 // A condition to apply to an index
 type Condition interface {
 	Key() string
 	Len() int
 	On(index indexes.Index)
-	Contains(id key.Type) bool
+	Contains(id key.Type) (int, bool)
 	Range() (int, int)
+	Iterator() indexes.Iterator
 }
 
 // An array of condition
