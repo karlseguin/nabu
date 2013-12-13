@@ -57,6 +57,13 @@ func (m *IdMap) get(s string, create bool) key.Type {
 	return id
 }
 
+func (m *IdMap) remove(s string) {
+	bucket := m.getBucket(s)
+	bucket.Lock()
+	delete(bucket.lookup, s)
+	bucket.Unlock()
+}
+
 func (m *IdMap) getBucket(s string) *IdMapBucket {
 	h := fnv.New32a()
 	h.Write([]byte(s))

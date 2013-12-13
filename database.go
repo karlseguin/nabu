@@ -129,15 +129,24 @@ func (d *Database) Update(doc Document) {
 	doc.ReadMeta(meta)
 
 	id, stringId := meta.getId(d.idMap)
+	bucket := d.getBucket(id)
+	bucket.Lock()
+	old, isUpdate := bucket.lookup[id]
+	bucket.lookup[id] = doc
+	bucket.Unlock()
+
+	oldMeta := newMeta()
+	if isUpdate {
+		old.ReadMeta(oldMeta)
+	}
 	for name, score := range meta.iIndexes {
+		delete(oldMeta.iIndexes, name)
 		index := d.getOrCreateIndex(name)
 		index.SetInt(id, score)
 	}
-
-	bucket := d.getBucket(id)
-	bucket.Lock()
-	bucket.lookup[id] = doc
-	bucket.Unlock()
+	for name, _ := range oldMeta.iIndexes {
+		d.getOrCreateIndex(name).Remove(id)
+	}
 
 	if d.loading == false {
 		idBuffer := id.Serialize()
@@ -175,6 +184,7 @@ func (d *Database) Remove(doc Document) {
 		defer idBuffer.Close()
 		d.dStorage.Remove(idBuffer.Bytes())
 		if len(stringId) != 0 {
+			d.idMap.remove(stringId)
 			d.mStorage.Remove([]byte(stringId))
 		}
 	}

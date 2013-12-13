@@ -26,3 +26,11 @@ func TestIdMapDoesNotCreateANewId(t *testing.T) {
 	m := newIdMap()
 	spec.Expect(m.get("over", false)).ToEqual(key.NULL)
 }
+
+func TestIdMapRemovesAnId(t *testing.T) {
+	spec := gspec.New(t)
+	m := newIdMap()
+	m.get("over", true)
+	m.remove("over")
+	spec.Expect(m.get("over", false)).ToEqual(key.NULL)
+}

@@ -12,7 +12,7 @@ type LessThan struct {
 }
 
 func (c *LessThan) Key() string {
-	return "lt" + strconv.Itoa(c.Value)
+	return "<" + strconv.Itoa(c.Value)
 }
 
 func (c *LessThan) On(index indexes.Index) {

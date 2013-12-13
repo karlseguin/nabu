@@ -97,11 +97,10 @@ func (q *Query) IncludeTotal() *Query {
 func (q *Query) Execute() Result {
 	defer q.reset()
 	indexCount := q.indexCount
+	q.sortLength = q.sort.Len()
 	if indexCount == 0 {
 		return q.findWithNoIndexes()
 	}
-
-	// q.sortLength = q.sort.Len()
 
 	// if indexCount == 0 {
 	// 	return q.findWithNoIndexes()

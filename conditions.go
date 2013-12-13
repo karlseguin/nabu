@@ -41,3 +41,7 @@ func GT(value int) Condition {
 func LT(value int) Condition {
 	return &conditions.LessThan{Value: value}
 }
+
+func EQ(value int) Condition {
+	return &conditions.Equal{Value: value}
+}

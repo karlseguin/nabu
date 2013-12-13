@@ -12,7 +12,7 @@ type GreaterThan struct {
 }
 
 func (c *GreaterThan) Key() string {
-	return "gt" + strconv.Itoa(c.Value)
+	return ">" + strconv.Itoa(c.Value)
 }
 
 func (c *GreaterThan) On(index indexes.Index) {
