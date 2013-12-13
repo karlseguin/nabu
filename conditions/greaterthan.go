@@ -7,12 +7,20 @@ import (
 )
 
 type GreaterThan struct {
-	Value int
-	index indexes.Index
+	length int
+	value  int
+	index  indexes.Index
+}
+
+func NewGreaterThan(value int) *GreaterThan {
+	return &GreaterThan{
+		length: -1,
+		value:  value,
+	}
 }
 
 func (c *GreaterThan) Key() string {
-	return ">" + strconv.Itoa(c.Value)
+	return ">" + strconv.Itoa(c.value)
 }
 
 func (c *GreaterThan) On(index indexes.Index) {
@@ -20,15 +28,18 @@ func (c *GreaterThan) On(index indexes.Index) {
 }
 
 func (c *GreaterThan) Range() (int, int) {
-	return c.Value + 1, indexes.MAX
+	return c.value + 1, indexes.MAX
 }
 
 func (c *GreaterThan) Len() int {
-	return c.index.Len() - c.index.GetRank(c.Value+1, true)
+	if c.length == -1 {
+		c.length = c.index.Len() - c.index.GetRank(c.value+1, true)
+	}
+	return c.length
 }
 
 func (c *GreaterThan) Contains(id key.Type) bool {
-	if score, exists := c.index.Contains(id); exists && score > c.Value {
+	if score, exists := c.index.Contains(id); exists && score > c.value {
 		return true
 	}
 	return false

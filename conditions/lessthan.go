@@ -7,12 +7,20 @@ import (
 )
 
 type LessThan struct {
-	Value int
-	index indexes.Index
+	value  int
+	length int
+	index  indexes.Index
+}
+
+func NewLessThan(value int) *LessThan {
+	return &LessThan{
+		length: -1,
+		value:  value,
+	}
 }
 
 func (c *LessThan) Key() string {
-	return "<" + strconv.Itoa(c.Value)
+	return "<" + strconv.Itoa(c.value)
 }
 
 func (c *LessThan) On(index indexes.Index) {
@@ -20,15 +28,18 @@ func (c *LessThan) On(index indexes.Index) {
 }
 
 func (c *LessThan) Range() (int, int) {
-	return indexes.MIN, c.Value - 1
+	return indexes.MIN, c.value - 1
 }
 
 func (c *LessThan) Len() int {
-	return c.index.GetRank(c.Value, false)
+	if c.length == -1 {
+		c.length = c.index.GetRank(c.value, false)
+	}
+	return c.length
 }
 
 func (c *LessThan) Contains(id key.Type) bool {
-	if score, exists := c.index.Contains(id); exists && score < c.Value {
+	if score, exists := c.index.Contains(id); exists && score < c.value {
 		return true
 	}
 	return false

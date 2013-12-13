@@ -174,6 +174,16 @@ func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
 	spec.Expect(result.Total()).ToEqual(4)
 }
 
+func TestQueryWithNoIndexesFiltersTheTotalCount(t *testing.T) {
+	spec := gspec.New(t)
+	db := New(SmallConfig().CacheWorkers(0))
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
+	result := db.Query("created").Where("created", GT(2)).Limit(2).IncludeTotal().Execute()
+	defer result.Close()
+	spec.Expect(result.Total()).ToEqual(5)
+}
+
 func TestQueryWithNoIndexesWithFilter(t *testing.T) {
 	db := New(SmallConfig())
 	db.Close()

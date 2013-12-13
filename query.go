@@ -102,26 +102,14 @@ func (q *Query) IncludeTotal() *Query {
 func (q *Query) Execute() Result {
 	defer q.reset()
 	indexCount := q.indexCount
-	q.sortLength = q.sort.Len()
 	if indexCount == 0 {
 		return q.findWithNoIndexes()
 	}
 
-	// if indexCount == 0 {
-	// 	return q.findWithNoIndexes()
-	// }
-	// if indexCount > 1 && q.cache == true {
-	// 	if cached, ok := q.db.cache.Get(q.indexNames[0:indexCount]); ok {
-	// 		q.indexCount = 1
-	// 		cached.RLock()
-	// 		defer cached.RUnlock()
-	// 		return q.execute(cached)
-	// 	}
-	// }
-
 	if q.prepareConditions() == false {
 		return EmptyResult
 	}
+	defer q.indexes[0:indexCount].RUnlock()
 	return q.execute()
 }
 
@@ -134,6 +122,7 @@ func (q *Query) prepareConditions() bool {
 	for i := 0; i < indexCount; i++ {
 		q.conditions[i].On(q.indexes[i])
 	}
+	q.indexes[0:indexCount].RLock()
 	if indexCount > 1 {
 		sort.Sort(q.conditions[0:indexCount])
 	}
@@ -148,42 +137,47 @@ func (q *Query) execute() Result {
 	if q.conditions[0].Len() == 0 {
 		return EmptyResult
 	}
-	return q.findBySort()
 	// if q.sortLength > firstLength*10 && firstLength <= q.db.maxUnsortedSize {
 	// 	return q.findByIndex(indexes)
 	// }
+	return q.findBySort()
 }
 
 // An optimized code path for when no index is provided (just walking through
 // a sort index)
 func (q *Query) findWithNoIndexes() Result {
 	limit := q.limit
-	sortLength := q.sortLength
 	result := <-q.db.sortedResults
+	result.total = -1
 	var iterator indexes.Iterator
 	if q.desc {
 		iterator = q.sort.Backwards()
 	} else {
 		iterator = q.sort.Forwards()
 	}
+	defer iterator.Close()
 	if q.sortCondition != nil {
 		iterator.Range(q.sortCondition.Range())
 	}
 	iterator.Offset(q.offset)
 
-	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
+	id := iterator.Current()
+	for ; id != key.NULL; id = iterator.Next() {
 		if result.add(id) == limit {
 			break
 		}
 	}
-	iterator.Close()
-
-	result.hasMore = sortLength > (q.offset + q.limit)
-	result.total = sortLength
-	if q.includeTotal == false {
-		result.total = -1
-	} else if result.total > q.upto {
-		result.total = q.upto
+	result.hasMore = id != key.NULL && iterator.Next() != key.NULL
+	if q.includeTotal {
+		if q.sortCondition != nil {
+			q.sortCondition.On(q.sort)
+			result.total = q.sortCondition.Len()
+		} else {
+			result.total = q.sort.Len()
+		}
+		if result.total > q.upto {
+			result.total = q.upto
+		}
 	}
 	return result
 }
@@ -205,8 +199,6 @@ func (q *Query) findBySort() Result {
 		iterator.Range(q.sortCondition.Range()).Offset(0)
 	}
 
-	indexes := q.indexes[0:indexCount]
-	indexes.RLock()
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < indexCount; j++ {
 			if q.conditions[j].Contains(id) == false {
@@ -224,7 +216,6 @@ func (q *Query) findBySort() Result {
 		}
 	nomatchdesc:
 	}
-	indexes.RUnlock()
 	iterator.Close()
 	result.hasMore = result.total > (q.offset + q.limit)
 	if q.includeTotal == false {

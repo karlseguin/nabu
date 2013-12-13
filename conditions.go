@@ -36,13 +36,13 @@ func (c Conditions) Swap(i, j int) {
 }
 
 func GT(value int) Condition {
-	return &conditions.GreaterThan{Value: value}
+	return conditions.NewGreaterThan(value)
 }
 
 func LT(value int) Condition {
-	return &conditions.LessThan{Value: value}
+	return conditions.NewLessThan(value)
 }
 
 func EQ(value int) Condition {
-	return &conditions.Equal{Value: value}
+	return conditions.NewEqual(value)
 }

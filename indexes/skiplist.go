@@ -408,10 +408,9 @@ func (i *SkiplistBackwardsIterator) Current() key.Type {
 func (i *SkiplistBackwardsIterator) Offset(offset int) Iterator {
 	if i.offset > 0 {
 		offset = i.offset - offset
-	}
-
-	if offset > 0 {
 		i.node = i.list.offset(offset)
+	} else if offset > 0 {
+		i.node = i.list.offset(i.list.Len() - offset - 1)
 	}
 	return i
 }
