@@ -21,22 +21,26 @@ type Document interface {
 
 // Meta describes a document
 type Meta struct {
-	uintId   uint
+	id   key.Type
 	stringId string
+	database *Database
+	IsUpdate bool
 	t        string
 
 	iIndexes map[string]int
 }
 
-func newMeta() *Meta {
+func newMeta(database *Database, isUpdate bool) *Meta {
 	return &Meta{
 		iIndexes: make(map[string]int),
+		database: database,
+		IsUpdate: isUpdate,
 	}
 }
 
 // The document's Id
 func (m *Meta) IntId(id uint) *Meta {
-	m.uintId = id
+	m.id = key.Type(id)
 	return m
 }
 
@@ -47,16 +51,14 @@ func (m *Meta) Type(t string) *Meta {
 }
 
 // The document's Id
-func (m *Meta) StringId(id string) *Meta {
-	m.stringId = id
-	return m
+func (m *Meta) StringId(stringId string) uint {
+	m.id = m.database.idMap.get(stringId, true)
+	m.stringId = stringId
+	return uint(m.id)
 }
 
-func (m *Meta) getId(idMap *IdMap) (key.Type, string) {
-	if len(m.stringId) == 0 {
-		return key.Type(m.uintId), ""
-	}
-	return idMap.get(m.stringId, true), m.stringId
+func (m *Meta) getId() (key.Type, string) {
+	return m.id, m.stringId
 }
 
 // Add an int-based index

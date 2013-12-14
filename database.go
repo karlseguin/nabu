@@ -121,17 +121,17 @@ func (d *Database) StringGet(id string) Document {
 
 // Inserts or updates the document
 func (d *Database) Update(doc Document) {
-	meta := newMeta()
+	meta := newMeta(d, true)
 	doc.ReadMeta(meta)
 
-	id, stringId := meta.getId(d.idMap)
+	id, stringId := meta.getId()
 	bucket := d.getBucket(id)
 	bucket.Lock()
 	old, isUpdate := bucket.lookup[id]
 	bucket.lookup[id] = doc
 	bucket.Unlock()
 
-	oldMeta := newMeta()
+	oldMeta := newMeta(d, false)
 	if isUpdate {
 		old.ReadMeta(oldMeta)
 	}
@@ -157,9 +157,9 @@ func (d *Database) Update(doc Document) {
 // Removes the document. Safe to call even if the document
 // does not exists.
 func (d *Database) Remove(doc Document) {
-	meta := newMeta()
+	meta := newMeta(d, false)
 	doc.ReadMeta(meta)
-	id, stringId := meta.getId(d.idMap)
+	id, stringId := meta.getId()
 	for name, _ := range meta.iIndexes {
 		d.indexLock.RLock()
 		index, exists := d.indexes[name]
