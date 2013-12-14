@@ -16,12 +16,14 @@ Any document stored in nabu must implement this interface:
 */
 type Document interface {
 	ReadMeta(meta *Meta)
+	GetType() string
 }
 
 // Meta describes a document
 type Meta struct {
 	uintId   uint
 	stringId string
+	t string
 
 	iIndexes map[string]int
 }
@@ -35,6 +37,12 @@ func newMeta() *Meta {
 // The document's Id
 func (m *Meta) IntId(id uint) *Meta {
 	m.uintId = id
+	return m
+}
+
+// The document's type
+func (m *Meta) Type(t string) *Meta {
+	m.t = t
 	return m
 }
 

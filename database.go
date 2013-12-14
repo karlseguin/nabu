@@ -2,9 +2,8 @@
 package nabu
 
 import (
-	"encoding/json"
 	"fmt"
-	// "github.com/karlseguin/nabu/cache"
+	"encoding/json"
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/storage"
@@ -43,14 +42,13 @@ allows you to infer the type based on the id).
      }
    }
 */
-type IntFactory func(id uint, data []byte) Document
-type StringFactory func(id string, data []byte) Document
+type IntFactory func(id uint, t string, data []byte) Document
+type StringFactory func(id string, t string, data []byte) Document
 
 // Database is the primary point of interaction with Nabu
 type Database struct {
 	loading bool
 	*Configuration
-	// cache           *cache.Cache
 	queryPool       chan *Query
 	buckets         map[int]*Bucket
 	dStorage        storage.Storage
@@ -76,7 +74,6 @@ func New(c *Configuration) *Database {
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
 		idMap:           newIdMap(),
 	}
-	// db.cache = cache.New(db, db.cacheWorkers, db.maxCacheStaleness)
 	for i := 0; i < int(c.bucketCount); i++ {
 		db.buckets[i] = &Bucket{lookup: make(map[key.Type]Document)}
 	}
@@ -148,10 +145,10 @@ func (d *Database) Update(doc Document) {
 		d.getOrCreateIndex(name).Remove(id)
 	}
 
-	if false && d.loading == false {
+	if d.loading == false {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
-		d.dStorage.Put(idBuffer.Bytes(), serializeValue(doc))
+		d.dStorage.Put(idBuffer.Bytes(), serializeValue(meta.t, doc))
 		if len(stringId) != 0 {
 			d.mStorage.Put([]byte(stringId), idBuffer.Bytes())
 		}
@@ -256,13 +253,6 @@ func (d *Database) getOrCreateIndex(name string) indexes.Index {
 	return index
 }
 
-// Signal the cache that an index was updated with a specific id
-func (d *Database) changed(indexName string, id key.Type, updated bool) {
-	if d.loading == false {
-		// d.cache.Changed(indexName, id, updated)
-	}
-}
-
 // Loads documents and indexes from the storage engine
 func (d *Database) restore() {
 	d.loading = true
@@ -270,8 +260,9 @@ func (d *Database) restore() {
 	if d.iFactory != nil {
 		iter := d.dStorage.Iterator()
 		for iter.Next() {
-			id, value := iter.Current()
-			d.Update(d.iFactory(key.Deserialize(id), value))
+			id, typedValue := iter.Current()
+			t, value := deserializeValue(typedValue)
+			d.Update(d.iFactory(key.Deserialize(id), t, value))
 		}
 	} else {
 		lookup := make(map[uint]string)
@@ -283,8 +274,9 @@ func (d *Database) restore() {
 
 		iter = d.dStorage.Iterator()
 		for iter.Next() {
-			id, value := iter.Current()
-			d.Update(d.sFactory(lookup[key.Deserialize(id)], value))
+			id, typedValue := iter.Current()
+			t, value := deserializeValue(typedValue)
+			d.Update(d.sFactory(lookup[key.Deserialize(id)], t, value))
 		}
 	}
 	d.loading = false
@@ -305,13 +297,29 @@ func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bo
 	return ok
 }
 
-// Serialize values to be passed to the storage engine
-func serializeValue(value interface{}) []byte {
+// Serialize type + values to be passed to the storage engine
+func serializeValue(t string, value interface{}) []byte {
 	serialized, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
-	return serialized
+	bt := []byte(t)
+	l := len(bt)
+	final := make([]byte, 1 + l + len(serialized))
+	final[0] = byte(l)
+	copy(final[1:], bt)
+	copy(final[l+1:], serialized)
+	return final
+}
+
+// Deserialize type  + value from the storage engine
+func deserializeValue(data []byte) (string, []byte) {
+	typeLength := data[0]
+	if typeLength == 0 {
+		return "", data[1:]
+	}
+	t := string(data[1:typeLength+1])
+	return t, data[typeLength+1:]
 }
 
 // Serialize values to be passed to the storage engine
