@@ -23,7 +23,7 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
 		spec.Expect(db.buckets[i]).ToNotBeNil()
 	}
 
-	query := db.Query("x")
+	query := db.Query("x").(*NormalQuery)
 	spec.Expect(query.limit).ToEqual(3)
 	query.Limit(23)
 	spec.Expect(query.limit).ToEqual(4)
@@ -119,6 +119,10 @@ func (d *Doc) ReadMeta(meta *Meta) {
 	}
 }
 
+func (d *Doc) GetType() string {
+	return "doc"
+}
+
 type StringDoc struct {
 	id      string
 	indexes map[string]int
@@ -136,6 +140,10 @@ func (d *StringDoc) ReadMeta(meta *Meta) {
 	for name, score := range d.indexes {
 		meta.IndexInt(name, score)
 	}
+}
+
+func (d *StringDoc) GetType() string {
+	return "stringdoc"
 }
 
 func SmallDB() *Database {

@@ -62,7 +62,7 @@ func (r *UnsortedResult) add(value key.Type, score int) {
 	r.found++
 }
 
-func (r *UnsortedResult) finalize(q *Query) *UnsortedResult {
+func (r *UnsortedResult) finalize(q *NormalQuery) *UnsortedResult {
 	r.total = r.found
 	r.ids = r.original[0:r.found]
 	sort.Sort(r)

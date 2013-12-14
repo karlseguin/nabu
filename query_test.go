@@ -10,17 +10,15 @@ func TestQueryCapsTheLimit(t *testing.T) {
 	db := SmallDB()
 	defer db.Close()
 	query := <-db.queryPool
-	spec.Expect(query.Limit(200).limit).ToEqual(100)
+	spec.Expect(query.Limit(200).(*NormalQuery).limit).ToEqual(100)
 }
 
-func TestQueryPanicsOnUnknownSort(t *testing.T) {
+func TestEmptyQueryOnInvalidIndex(t *testing.T) {
 	spec := gspec.New(t)
-	defer func() {
-		spec.Expect(recover().(string)).ToEqual(`unknown index "cats"`)
-	}()
 	db := SmallDB()
 	defer db.Close()
-	db.Query("cats")
+	_, ok := db.Query("cats").(*EmptyQuery)
+	spec.Expect(ok).ToEqual(true)
 }
 
 func TestQueryEmptyIndex(t *testing.T) {

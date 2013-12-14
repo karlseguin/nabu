@@ -23,7 +23,7 @@ type Document interface {
 type Meta struct {
 	uintId   uint
 	stringId string
-	t string
+	t        string
 
 	iIndexes map[string]int
 }

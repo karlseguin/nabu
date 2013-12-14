@@ -2,7 +2,6 @@
 package nabu
 
 import (
-	"fmt"
 	"encoding/json"
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
@@ -49,7 +48,7 @@ type StringFactory func(id string, t string, data []byte) Document
 type Database struct {
 	loading bool
 	*Configuration
-	queryPool       chan *Query
+	queryPool       chan *NormalQuery
 	buckets         map[int]*Bucket
 	dStorage        storage.Storage
 	mStorage        storage.Storage
@@ -68,7 +67,7 @@ func New(c *Configuration) *Database {
 		indexes:         make(map[string]indexes.Index),
 		dStorage:        storage.New(c.dbPath + "documents"),
 		mStorage:        storage.New(c.dbPath + "idmap"),
-		queryPool:       make(chan *Query, c.queryPoolSize),
+		queryPool:       make(chan *NormalQuery, c.queryPoolSize),
 		buckets:         make(map[int]*Bucket, c.bucketCount),
 		sortedResults:   make(chan *SortedResult, c.sortedResultPoolSize),
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
@@ -94,12 +93,12 @@ func New(c *Configuration) *Database {
 }
 
 // Generate a Query object against the specified sort index
-func (d *Database) Query(indexName string) *Query {
+func (d *Database) Query(indexName string) Query {
 	d.indexLock.RLock()
 	index, exists := d.indexes[indexName]
 	d.indexLock.RUnlock()
 	if exists == false {
-		panic(fmt.Sprintf("unknown index %q", indexName))
+		return emptyQuery
 	}
 	q := <-d.queryPool
 	q.sort = index
@@ -305,7 +304,7 @@ func serializeValue(t string, value interface{}) []byte {
 	}
 	bt := []byte(t)
 	l := len(bt)
-	final := make([]byte, 1 + l + len(serialized))
+	final := make([]byte, 1+l+len(serialized))
 	final[0] = byte(l)
 	copy(final[1:], bt)
 	copy(final[l+1:], serialized)
@@ -318,7 +317,7 @@ func deserializeValue(data []byte) (string, []byte) {
 	if typeLength == 0 {
 		return "", data[1:]
 	}
-	t := string(data[1:typeLength+1])
+	t := string(data[1 : typeLength+1])
 	return t, data[typeLength+1:]
 }
 
