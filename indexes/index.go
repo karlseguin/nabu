@@ -36,7 +36,10 @@ type Iterator interface {
 }
 
 // Creates the index
-func NewIndex(name string) Index {
+func NewIndex(name string, set bool) Index {
+	if set {
+		return newSet(name)
+	}
 	return newSkiplist(name)
 }
 

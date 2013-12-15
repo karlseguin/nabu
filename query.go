@@ -1,6 +1,7 @@
 package nabu
 
 import (
+	"github.com/karlseguin/nabu/conditions"
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
 	"sort"
@@ -8,6 +9,7 @@ import (
 
 type Query interface {
 	NoCache() Query
+	Set(name, value string) Query
 	Where(index string, condition Condition) Query
 	Desc() Query
 	Limit(limit int) Query
@@ -45,6 +47,14 @@ func newQuery(db *Database) Query {
 		conditions: make(Conditions, db.maxIndexesPerQuery),
 	}
 	q.reset()
+	return q
+}
+
+// Filter on a set.
+func (q *NormalQuery) Set(indexName, value string) Query {
+	q.indexNames[q.indexCount] = indexName + "=" + value
+	q.conditions[q.indexCount] = conditions.NewSet(value)
+	q.indexCount++
 	return q
 }
 

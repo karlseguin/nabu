@@ -137,11 +137,14 @@ func (d *Database) Update(doc Document) {
 	}
 	for name, score := range meta.iIndexes {
 		delete(oldMeta.iIndexes, name)
-		index := d.getOrCreateIndex(name)
+		_, isSet := meta.sets[name]
+		index := d.getOrCreateIndex(name, isSet)
 		index.SetInt(id, score)
 	}
 	for name, _ := range oldMeta.iIndexes {
-		d.getOrCreateIndex(name).Remove(id)
+		if index, exists := d.getIndex(name); exists {
+			index.Remove(id)
+		}
 	}
 
 	if d.loading == false {
@@ -161,13 +164,9 @@ func (d *Database) Remove(doc Document) {
 	doc.ReadMeta(meta)
 	id, stringId := meta.getId()
 	for name, _ := range meta.iIndexes {
-		d.indexLock.RLock()
-		index, exists := d.indexes[name]
-		d.indexLock.RUnlock()
-		if exists == false {
-			continue
+		if index, exists := d.getIndex(name); exists {
+			index.Remove(id)
 		}
-		index.Remove(id)
 	}
 
 	bucket := d.getBucket(id)
@@ -234,10 +233,8 @@ func (d *Database) getBucket(key key.Type) *Bucket {
 }
 
 // Gets the sort index, or creates it if it doesn't already exists
-func (d *Database) getOrCreateIndex(name string) indexes.Index {
-	d.indexLock.RLock()
-	index, exists := d.indexes[name]
-	d.indexLock.RUnlock()
+func (d *Database) getOrCreateIndex(name string, isSet bool) indexes.Index {
+	index, exists := d.getIndex(name)
 	if exists {
 		return index
 	}
@@ -246,10 +243,17 @@ func (d *Database) getOrCreateIndex(name string) indexes.Index {
 	defer d.indexLock.Unlock()
 	index, exists = d.indexes[name]
 	if exists == false {
-		index = indexes.NewIndex(name)
+		index = indexes.NewIndex(name, isSet)
 		d.indexes[name] = index
 	}
 	return index
+}
+
+func (d *Database) getIndex(name string) (indexes.Index, bool) {
+	d.indexLock.RLock()
+	defer d.indexLock.RUnlock()
+	index, exists := d.indexes[name]
+	return index, exists
 }
 
 // Loads documents and indexes from the storage engine

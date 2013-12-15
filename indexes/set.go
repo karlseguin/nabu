@@ -69,8 +69,8 @@ func (s *Set) Contains(id key.Type) (int, bool) {
 }
 
 // Get the score for an individual id
-func (s *Set) GetRank(id key.Type, first bool) int {
-	return s.lookup[id]
+func (s *Set) GetRank(id int, first bool) int {
+	return 0
 }
 
 func (s *Set) RLock() {

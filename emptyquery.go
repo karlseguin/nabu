@@ -7,6 +7,9 @@ type EmptyQuery struct{}
 func (q *EmptyQuery) NoCache() Query {
 	return q
 }
+func (q *EmptyQuery) Set(index, value string) Query {
+	return q
+}
 func (q *EmptyQuery) Where(index string, condition Condition) Query {
 	return q
 }

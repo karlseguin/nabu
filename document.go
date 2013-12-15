@@ -28,11 +28,13 @@ type Meta struct {
 	t        string
 
 	iIndexes map[string]int
+	sets     map[string]struct{}
 }
 
 func newMeta(database *Database, isUpdate bool) *Meta {
 	return &Meta{
 		iIndexes: make(map[string]int),
+		sets:     make(map[string]struct{}),
 		database: database,
 		IsUpdate: isUpdate,
 	}
@@ -65,4 +67,10 @@ func (m *Meta) getId() (key.Type, string) {
 func (m *Meta) IndexInt(name string, score int) *Meta {
 	m.iIndexes[name] = score
 	return m
+}
+
+func (m *Meta) Set(name, value string) *Meta {
+	fullName := name + "=" + value
+	m.sets[fullName] = struct{}{}
+	return m.IndexInt(fullName, 0)
 }
