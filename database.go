@@ -42,7 +42,7 @@ allows you to infer the type based on the id).
    }
 */
 type IntFactory func(id uint, t string, data []byte) Document
-type StringFactory func(id string, t string, data []byte) Document
+type StringFactory func(id string, stringId uint, t string, data []byte) Document
 
 // Database is the primary point of interaction with Nabu
 type Database struct {
@@ -274,12 +274,14 @@ func (d *Database) restore() {
 			stringId, id := iter.Current()
 			lookup[key.Deserialize(id)] = string(stringId)
 		}
+		d.idMap.load(lookup)
 
 		iter = d.dStorage.Iterator()
 		for iter.Next() {
-			id, typedValue := iter.Current()
+			rawId, typedValue := iter.Current()
+			id := key.Deserialize(rawId)
 			t, value := deserializeValue(typedValue)
-			d.Update(d.sFactory(lookup[key.Deserialize(id)], t, value))
+			d.Update(d.sFactory(lookup[id], id, t, value))
 		}
 	}
 	d.loading = false

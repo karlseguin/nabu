@@ -31,6 +31,18 @@ func newIdMap() *IdMap {
 	return m
 }
 
+// assumes not being called from multiple threads
+func (m *IdMap) load(ids map[uint]string) {
+	max := uint(0)
+	for id, s := range ids {
+		if id > max {
+			max = id
+		}
+		m.getBucket(s).lookup[s] = key.Type(id)
+	}
+	m.counter = uint64(max)
+}
+
 func (m *IdMap) get(s string, create bool) key.Type {
 	bucket := m.getBucket(s)
 
