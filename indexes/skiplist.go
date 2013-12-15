@@ -117,11 +117,10 @@ func (s *Skiplist) SetInt(id key.Type, score int) {
 }
 
 // Removes the id from the index
-func (s *Skiplist) Remove(id key.Type) int {
+func (s *Skiplist) Remove(id key.Type) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.remove(id)
-	return s.Len()
 }
 
 // Number of items in the index

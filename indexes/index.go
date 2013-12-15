@@ -12,7 +12,7 @@ type Index interface {
 	Name() string
 	Len() int
 	SetInt(id key.Type, score int)
-	Remove(id key.Type) int
+	Remove(id key.Type)
 	Contains(id key.Type) (int, bool)
 	GetRank(score int, first bool) int
 	RLock()
