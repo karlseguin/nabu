@@ -21,7 +21,7 @@ type Document interface {
 
 // Meta describes a document
 type Meta struct {
-	id   key.Type
+	id       key.Type
 	stringId string
 	database *Database
 	IsUpdate bool

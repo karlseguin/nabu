@@ -51,3 +51,7 @@ func LT(value int) Condition {
 func EQ(value int) Condition {
 	return conditions.NewEqual(value)
 }
+
+func Between(from, to int) Condition {
+	return conditions.NewBetween(from, to)
+}
