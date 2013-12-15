@@ -44,8 +44,16 @@ func GT(value int) Condition {
 	return conditions.NewGreaterThan(value)
 }
 
+func GTE(value int) Condition {
+	return conditions.NewGreaterThanOrEqual(value)
+}
+
 func LT(value int) Condition {
 	return conditions.NewLessThan(value)
+}
+
+func LTE(value int) Condition {
+	return conditions.NewLessThanOrEqual(value)
 }
 
 func EQ(value int) Condition {
