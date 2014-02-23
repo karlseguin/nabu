@@ -159,7 +159,7 @@ func (q *NormalQuery) prepareConditions() bool {
 	return true
 }
 
-// Determines wither an index-based query will be used or a sort-based query.
+// Determines wether an index-based query will be used or a sort-based query.
 // The choice is based on the type of sort index (whether it can rank documents),
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.

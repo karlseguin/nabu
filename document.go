@@ -16,7 +16,6 @@ Any document stored in nabu must implement this interface:
 */
 type Document interface {
 	ReadMeta(meta *Meta)
-	GetType() string
 }
 
 // Meta describes a document
