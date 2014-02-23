@@ -3,6 +3,7 @@ package nabu
 
 import (
 	"encoding/json"
+	"github.com/karlseguin/nabu/cache"
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/storage"
@@ -48,6 +49,7 @@ type StringFactory func(id string, stringId uint, t string, data []byte) Documen
 type Database struct {
 	loading bool
 	*Configuration
+	cache           *cache.Cache
 	queryPool       chan *NormalQuery
 	buckets         map[int]*Bucket
 	dStorage        storage.Storage
@@ -73,6 +75,7 @@ func New(c *Configuration) *Database {
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
 		idMap:           newIdMap(),
 	}
+	db.cache = cache.New(db.cacheWorkers)
 	for i := 0; i < int(c.bucketCount); i++ {
 		db.buckets[i] = &Bucket{lookup: make(map[key.Type]Document)}
 	}
@@ -147,6 +150,7 @@ func (d *Database) Update(doc Document) {
 		}
 	}
 
+	d.loading = true
 	if d.loading == false {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
@@ -288,12 +292,12 @@ func (d *Database) restore() {
 }
 
 // Callback used to load indexes from index names
-func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bool {
+func (d *Database) LookupIndexes(queryIndex []*QueryIndex, target indexes.Indexes) bool {
 	ok := true
 	d.indexLock.RLock()
-	d.indexLock.RUnlock()
-	for i, name := range indexNames {
-		index, exists := d.indexes[name]
+	defer d.indexLock.RUnlock()
+	for i, qi := range queryIndex {
+		index, exists := d.indexes[qi.indexName]
 		target[i] = index
 		if exists == false {
 			ok = false

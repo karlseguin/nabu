@@ -119,7 +119,5 @@ func (r *UnsortedResult) Less(i, j int) bool {
 }
 
 func (r *UnsortedResult) Swap(i, j int) {
-	x := r.ids[i]
-	r.ids[i] = r.ids[j]
-	r.ids[j] = x
+	r.ids[i], r.ids[j] = r.ids[j], r.ids[i]
 }

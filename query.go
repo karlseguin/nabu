@@ -1,6 +1,7 @@
 package nabu
 
 import (
+	"bytes"
 	"github.com/karlseguin/nabu/conditions"
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
@@ -18,6 +19,32 @@ type Query interface {
 	Execute() Result
 }
 
+// A query index is a wrapper to an index and a condition. Indexes are long-lived
+// but conditions are query-specific. QueryIndex wraps the two so that they can
+// be manipulated together (you can sort on indexName, for example, without having
+// to worry about also tracking the corresponding condition)
+
+// TODO: Conditions should leverage an identity map so that we aren't creating
+// the same ones over and over again
+type QueryIndex struct {
+	indexName string
+	condition Condition
+}
+
+type QueryIndexes []*QueryIndex
+
+func (qi QueryIndexes) Len() int {
+	return len(qi)
+}
+
+func (qi QueryIndexes) Less(a, b int) bool {
+	return len(qi[a].indexName) < len(qi[b].indexName)
+}
+
+func (qi QueryIndexes) Swap(a, b int) {
+	qi[a], qi[b] = qi[b], qi[a]
+}
+
 // Build and executes a query against the database
 type NormalQuery struct {
 	upto          int
@@ -32,28 +59,32 @@ type NormalQuery struct {
 	sortCondition Condition
 	sort          indexes.Index
 	ranged        bool
-	indexNames    []string
-	conditions    Conditions
+	queryIndexes  QueryIndexes
 	indexes       indexes.Indexes
+	idBuffer      *bytes.Buffer
 }
 
 // Queries are statically created upfront and reused
 func newQuery(db *Database) Query {
 	q := &NormalQuery{
-		db:         db,
-		cache:      true,
-		indexes:    make(indexes.Indexes, db.maxIndexesPerQuery),
-		indexNames: make([]string, db.maxIndexesPerQuery),
-		conditions: make(Conditions, db.maxIndexesPerQuery),
+		db:           db,
+		cache:        true,
+		indexes:      make(indexes.Indexes, db.maxIndexesPerQuery),
+		queryIndexes: make(QueryIndexes, db.maxIndexesPerQuery),
+		idBuffer:     new(bytes.Buffer),
 	}
-	q.reset()
+	for i := 0; i < db.maxIndexesPerQuery; i++ {
+		q.queryIndexes[i] = new(QueryIndex)
+	}
+	q.Close()
 	return q
 }
 
 // Filter on a set.
 func (q *NormalQuery) Set(indexName, value string) Query {
-	q.indexNames[q.indexCount] = indexName + "=" + value
-	q.conditions[q.indexCount] = conditions.NewSet(value)
+	qi := q.queryIndexes[q.indexCount]
+	qi.indexName = indexName + "=" + value
+	qi.condition = conditions.NewSet(value)
 	q.indexCount++
 	return q
 }
@@ -67,8 +98,9 @@ func (q *NormalQuery) Where(indexName string, condition Condition) Query {
 	if indexName == q.sort.Name() {
 		q.sortCondition = condition
 	} else {
-		q.indexNames[q.indexCount] = indexName
-		q.conditions[q.indexCount] = condition
+		qi := q.queryIndexes[q.indexCount]
+		qi.indexName = indexName
+		qi.condition = condition
 		q.indexCount++
 	}
 	return q
@@ -119,9 +151,10 @@ func (q *NormalQuery) IncludeTotal() Query {
 
 // Executes the query, returning a result. The result must be closed
 // once you are done with it
+//
+// It's possible for the cache to claim the query, meaning the cache becomes
+// responsible for releasing it back into the pool
 func (q *NormalQuery) Execute() Result {
-	defer q.reset()
-
 	q.sort.RLock()
 	if q.sortCondition != nil {
 		q.sortCondition.On(q.sort)
@@ -133,7 +166,22 @@ func (q *NormalQuery) Execute() Result {
 
 	indexCount := q.indexCount
 	if indexCount == 0 {
-		return q.findWithNoIndexes()
+		defer q.Close()
+		return q.findWithOneIndex(q.sort, false)
+	}
+
+	if q.cache == true {
+		cached, ok, wait := q.db.cache.Get(q)
+		if wait == nil {
+			defer q.Close()
+		} else {
+			defer wait.Done()
+		}
+		if ok {
+			return q.findWithOneIndex(cached, true)
+		}
+	} else {
+		defer q.Close()
 	}
 
 	if q.prepareConditions() == false {
@@ -146,15 +194,15 @@ func (q *NormalQuery) Execute() Result {
 // Loads the indexes used by the query
 func (q *NormalQuery) prepareConditions() bool {
 	indexCount := q.indexCount
-	if q.db.LookupIndexes(q.indexNames[0:indexCount], q.indexes) == false {
+	if q.db.LookupIndexes(q.queryIndexes[0:indexCount], q.indexes) == false {
 		return false
 	}
 	for i := 0; i < indexCount; i++ {
-		q.conditions[i].On(q.indexes[i])
+		q.queryIndexes[i].condition.On(q.indexes[i])
 	}
 	q.indexes[0:indexCount].RLock()
 	if indexCount > 1 {
-		sort.Sort(q.conditions[0:indexCount])
+		sort.Sort(q.indexes[0:indexCount])
 	}
 	return true
 }
@@ -164,7 +212,7 @@ func (q *NormalQuery) prepareConditions() bool {
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.
 func (q *NormalQuery) execute() Result {
-	firstLength := q.conditions[0].Len()
+	firstLength := q.queryIndexes[0].condition.Len()
 	if firstLength == 0 {
 		return EmptyResult
 	}
@@ -175,19 +223,19 @@ func (q *NormalQuery) execute() Result {
 	return q.findBySort()
 }
 
-// An optimized code path for when no index is provided (just walking through
-// a sort index)
-func (q *NormalQuery) findWithNoIndexes() Result {
+// An optimized code path for when no filter is provided. This happens on a
+// cache hit, or when iterating through a full set
+func (q *NormalQuery) findWithOneIndex(index indexes.Index, presorted bool) Result {
 	limit := q.limit
 	result := <-q.db.sortedResults
 	result.total = -1
 	var iterator indexes.Iterator
 	if q.desc {
-		iterator = q.sort.Backwards()
+		iterator = index.Backwards()
 	} else {
-		iterator = q.sort.Forwards()
+		iterator = index.Forwards()
 	}
-	if q.sortCondition != nil {
+	if presorted == false && q.sortCondition != nil {
 		iterator.Range(q.sortCondition.Range())
 	}
 	iterator.Offset(q.offset)
@@ -229,7 +277,7 @@ func (q *NormalQuery) findBySort() Result {
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < indexCount; j++ {
-			if _, exists := q.conditions[j].Contains(id); exists == false {
+			if _, exists := q.queryIndexes[j].condition.Contains(id); exists == false {
 				goto nomatchdesc
 			}
 		}
@@ -266,12 +314,12 @@ func (q *NormalQuery) findByIndex() Result {
 		sort = q.sort
 	}
 
-	iterator := q.conditions[0].Iterator()
+	iterator := q.queryIndexes[0].condition.Iterator()
 	defer iterator.Close()
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 1; j < indexCount; j++ {
-			if _, exists := q.conditions[j].Contains(id); exists == false {
+			if _, exists := q.queryIndexes[j].condition.Contains(id); exists == false {
 				goto nomatch
 			}
 		}
@@ -283,14 +331,34 @@ func (q *NormalQuery) findByIndex() Result {
 	return result.finalize(q)
 }
 
+// An id which uniquely represents this query, without considering offset,
+// limit and direction. This is used for caching.
+func (q *NormalQuery) Id() string {
+	indexCount := q.indexCount
+	sort.Sort(q.queryIndexes[0:indexCount])
+
+	for i := 0; i < indexCount; i++ {
+		qi := q.queryIndexes[i]
+		q.idBuffer.WriteString(qi.indexName)
+		q.idBuffer.WriteString(qi.condition.Key())
+		q.idBuffer.WriteByte('&')
+	}
+	q.idBuffer.WriteString(q.sort.Name())
+	if q.sortCondition != nil {
+		q.idBuffer.WriteString(q.sortCondition.Key())
+	}
+	return q.idBuffer.String()
+}
+
 // Reset the query and release it back into the pool
-func (q *NormalQuery) reset() {
+func (q *NormalQuery) Close() {
 	q.sort = nil
 	q.offset = 0
 	q.cache = true
 	q.desc = false
 	q.indexCount = 0
 	q.ranged = false
+	q.idBuffer.Truncate()
 	q.includeTotal = false
 	q.sortCondition = nil
 	q.limit = q.db.defaultLimit

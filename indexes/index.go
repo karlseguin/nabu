@@ -51,6 +51,19 @@ func LoadIndex(name string, values map[key.Type]int) Index {
 // An array of indexes
 type Indexes []Index
 
+func (i Indexes) Len() int {
+	return len(i)
+}
+
+func (i Indexes) Less(a, b int) bool {
+	return i[a].Len() < i[b].Len()
+}
+
+// Used to sort an array based on length
+func (i Indexes) Swap(a, b int) {
+	i[a], i[b] = i[b], i[a]
+}
+
 // Read locks all indexes within the array
 func (indexes Indexes) RLock() {
 	for _, index := range indexes {
