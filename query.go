@@ -154,7 +154,7 @@ func (q *NormalQuery) prepareConditions() bool {
 	}
 	q.indexes[0:indexCount].RLock()
 	if indexCount > 1 {
-		sort.Sort(q.conditions[0:indexCount])
+		sort.Sort(q.indexes[0:indexCount])
 	}
 	return true
 }
