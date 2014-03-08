@@ -162,10 +162,14 @@ func addIndex(db *Database, index indexes.Index) {
 	db.indexes[index.Name()] = index
 }
 
-func makeIndex(db *Database, name string, ids ...int) {
+func makeIndex(db *Database, name string, ids ...int) indexes.Index {
 	m := make(map[key.Type]int, len(ids))
 	for _, id := range ids {
 		m[key.Type(id)] = id
 	}
-	addIndex(db, indexes.LoadIndex(name, m))
+	index := indexes.LoadIndex(name, m)
+	if db != nil {
+		addIndex(db, index)
+	}
+	return index
 }

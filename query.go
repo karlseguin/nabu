@@ -182,7 +182,7 @@ func (q *NormalQuery) execute() Result {
 		return EmptyResult
 	}
 
-	if q.sortLength > firstLength * 5 && firstLength <= q.db.maxUnsortedSize && first.CanIterate() {
+	if q.sortLength > firstLength*5 && firstLength <= q.db.maxUnsortedSize && first.CanIterate() {
 		return q.findByIndex()
 	}
 	return q.findBySort()

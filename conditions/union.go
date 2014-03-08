@@ -3,22 +3,22 @@ package conditions
 import (
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
-	"strings"
 	"sort"
+	"strings"
 )
 
 type Union struct {
-	key string
+	key        string
 	indexCount int
-	values []string
-	indexes indexes.Indexes
+	values     []string
+	indexes    indexes.Indexes
 }
 
 func NewUnion(values []string) *Union {
 	return &Union{
-		values: values,
+		values:  values,
 		indexes: make(indexes.Indexes, len(values)),
-		key: "in (" + strings.Join(values, ",") + ")",
+		key:     "in (" + strings.Join(values, ",") + ")",
 	}
 }
 
