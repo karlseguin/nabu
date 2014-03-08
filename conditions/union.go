@@ -18,7 +18,7 @@ func NewUnion(values []string) *Union {
 	return &Union{
 		values:  values,
 		indexes: make(indexes.Indexes, len(values)),
-		key:     "in (" + strings.Join(values, ",") + ")",
+		key:     "in(" + strings.Join(values, ",") + ")",
 	}
 }
 
