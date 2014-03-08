@@ -17,6 +17,7 @@ type Condition interface {
 	On(index indexes.Index)
 	Contains(id key.Type) (int, bool)
 	Range() (int, int)
+	CanIterate() bool
 	Iterator() indexes.Iterator
 }
 
@@ -35,9 +36,7 @@ func (c Conditions) Less(i, j int) bool {
 
 // Used to sort an array based on length
 func (c Conditions) Swap(i, j int) {
-	x := c[i]
-	c[i] = c[j]
-	c[j] = x
+	c[i], c[j] = c[j], c[i]
 }
 
 func GT(value int) Condition {

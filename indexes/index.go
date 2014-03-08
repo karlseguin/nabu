@@ -64,3 +64,18 @@ func (indexes Indexes) RUnlock() {
 		index.RUnlock()
 	}
 }
+
+// The number of items in our array of set
+func (indexes Indexes) Len() int {
+	return len(indexes)
+}
+
+// Used to sort an array based on length
+func (indexes Indexes) Less(i, j int) bool {
+	return indexes[i].Len() < indexes[j].Len()
+}
+
+// Used to sort an array based on length
+func (indexes Indexes) Swap(i, j int) {
+	indexes[i], indexes[j] = indexes[j], indexes[i]
+}
