@@ -31,7 +31,7 @@ func (c Conditions) Len() int {
 
 // Used to sort an array based on length
 func (c Conditions) Less(i, j int) bool {
-	return c[i].Len() < c[j].Len()
+	return c[i].CanIterate() && c[i].Len() < c[j].Len()
 }
 
 // Used to sort an array based on length
