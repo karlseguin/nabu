@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-
 func TestUnionDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
 	union := NewUnion([]string{"apple", "orange"})
