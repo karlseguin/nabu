@@ -10,6 +10,7 @@ import (
 
 type Query interface {
 	NoCache() Query
+	Union(name string, values ...string) Query
 	Set(name, value string) Query
 	Where(index string, condition Condition) Query
 	Desc() Query
@@ -86,6 +87,18 @@ func (q *NormalQuery) Set(indexName, value string) Query {
 	qi.indexName = indexName + "=" + value
 	qi.condition = conditions.NewSet(value)
 	q.indexCount++
+	return q
+}
+
+// Filter on an a union of set values (tag1 || tag2 || tag3).
+func (q *NormalQuery) Union(indexName string, values ...string) Query {
+	condition := conditions.NewUnion(values)
+	for _, value := range values {
+		qi := q.queryIndexes[q.indexCount]
+		qi.indexName = indexName + "=" + value
+		qi.condition = condition
+		q.indexCount++
+	}
 	return q
 }
 
@@ -197,10 +210,10 @@ func (q *NormalQuery) prepareConditions() bool {
 	if q.db.LookupIndexes(q.queryIndexes[0:indexCount], q.indexes) == false {
 		return false
 	}
+	q.indexes[0:indexCount].RLock()
 	for i := 0; i < indexCount; i++ {
 		q.queryIndexes[i].condition.On(q.indexes[i])
 	}
-	q.indexes[0:indexCount].RLock()
 	if indexCount > 1 {
 		sort.Sort(q.indexes[0:indexCount])
 	}
@@ -212,12 +225,13 @@ func (q *NormalQuery) prepareConditions() bool {
 // whether the smallest index fits within the configured maximum unsorted size and,
 // whether the smallest index is sufficiently small compared to the sort index.
 func (q *NormalQuery) execute() Result {
-	firstLength := q.queryIndexes[0].condition.Len()
+	first := q.queryIndexes[0]
+	firstLength := first.condition.Len()
 	if firstLength == 0 {
 		return EmptyResult
 	}
 
-	if q.sortLength > firstLength*5 && firstLength <= q.db.maxUnsortedSize {
+	if q.sortLength > firstLength * 5 && firstLength <= q.db.maxUnsortedSize && first.condition.CanIterate() {
 		return q.findByIndex()
 	}
 	return q.findBySort()
@@ -358,7 +372,7 @@ func (q *NormalQuery) Close() {
 	q.desc = false
 	q.indexCount = 0
 	q.ranged = false
-	q.idBuffer.Truncate()
+	q.idBuffer.Truncate(0)
 	q.includeTotal = false
 	q.sortCondition = nil
 	q.limit = q.db.defaultLimit

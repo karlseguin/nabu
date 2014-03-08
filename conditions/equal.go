@@ -46,6 +46,10 @@ func (c *Equal) Contains(id key.Type) (int, bool) {
 	return 0, false
 }
 
+func (c *Equal) CanIterate() bool {
+	return true
+}
+
 func (c *Equal) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)

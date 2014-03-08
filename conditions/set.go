@@ -39,6 +39,10 @@ func (c *Set) Contains(id key.Type) (int, bool) {
 	return 0, false
 }
 
+func (c *Set) CanIterate() bool {
+	return true
+}
+
 func (c *Set) Iterator() indexes.Iterator {
 	return c.index.Forwards()
 }

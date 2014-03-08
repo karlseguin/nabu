@@ -17,6 +17,7 @@ type Condition interface {
 	On(index indexes.Index)
 	Contains(id key.Type) (int, bool)
 	Range() (int, int)
+	CanIterate() bool
 	Iterator() indexes.Iterator
 }
 
@@ -30,7 +31,7 @@ func (c Conditions) Len() int {
 
 // Used to sort an array based on length
 func (c Conditions) Less(i, j int) bool {
-	return c[i].Len() < c[j].Len()
+	return c[i].CanIterate() && c[i].Len() < c[j].Len()
 }
 
 // Used to sort an array based on length
