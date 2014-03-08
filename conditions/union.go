@@ -38,7 +38,9 @@ func (c *Union) Range() (int, int) {
 	return 0, c.Len()
 }
 
-//our longest index is the length of this composite
+//This is wrong. The length should be the sum of all unique values across
+//all indexes. However, since CanIterate() return false, it doesn't matter.
+//Still, would be nice to have this be right and be able to iterate!
 func (c *Union) Len() int {
 	return c.indexes[c.indexCount-1].Len()
 }
