@@ -39,7 +39,6 @@ type Skiplist struct {
 
 type SkiplistNode struct {
 	score int
-	sscore string
 	id    key.Type
 	next  []*SkiplistNode
 	width []int
@@ -76,7 +75,7 @@ func newSkiplist(name string) *Skiplist {
 func loadSkiplist(name string, values map[key.Type]int) *Skiplist {
 	sl := newSkiplist(name)
 	for id, score := range values {
-		sl.setInt(id, score, "")
+		sl.setInt(id, score)
 	}
 	return sl
 }
@@ -100,16 +99,12 @@ func (s *Skiplist) draw() {
 
 func (s *Skiplist) Load(values []key.Type) {
 	for index, value := range values {
-		s.setInt(value, index, "")
+		s.setInt(value, index)
 	}
 }
 
 // Stores a id within the index with the specified score
 func (s *Skiplist) SetInt(id key.Type, score int) {
-	s.SetIntSub(id, score, "")
-}
-
-func (s *Skiplist) SetIntSub(id key.Type, score int, sscore string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if r, exists := s.lookup[id]; exists {
@@ -118,7 +113,7 @@ func (s *Skiplist) SetIntSub(id key.Type, score int, sscore string) {
 		}
 		s.remove(id)
 	}
-	s.setInt(id, score, sscore)
+	s.setInt(id, score)
 }
 
 // Removes the id from the index
@@ -157,12 +152,11 @@ func (s *Skiplist) RUnlock() {
 	s.lock.RUnlock()
 }
 
-func (s *Skiplist) setInt(id key.Type, score int, sscore string) {
+func (s *Skiplist) setInt(id key.Type, score int) {
 	level := s.getLevel()
 	node := &SkiplistNode{
 		id:    id,
 		score: score,
-		sscore: sscore,
 		width: make([]int, level+1),
 		next:  make([]*SkiplistNode, level+1),
 	}
@@ -171,10 +165,7 @@ func (s *Skiplist) setInt(id key.Type, score int, sscore string) {
 	for i := s.levels; i >= 0; i-- {
 		for ; current.next[i] != nil; current = current.next[i] {
 			next := current.next[i]
-			if next.score > score || next == s.tail {
-				break
-			}
-			if next.score == score && ((sscore == "" && next.id > id) || (sscore != "" && sscore < next.sscore)){
+			if next.score > score || (next.score == score && next.id > id) || next == s.tail {
 				break
 			}
 		}

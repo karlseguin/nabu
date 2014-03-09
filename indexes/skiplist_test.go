@@ -207,17 +207,6 @@ func TestSkiplistSetAndRemoveItems(t *testing.T) {
 	}
 }
 
-func TestSkipListWithSubScore(t *testing.T) {
-	s := newSkiplist("test")
-	s.SetIntSub(1, 0, "oranges")
-	s.SetIntSub(2, 0, "apples")
-	s.SetIntSub(3, 0, "bananas")
-	s.SetIntSub(4, 0, "strawberries")
-	s.SetIntSub(5, 0, "plums")
-	s.SetIntSub(6, 0, "grapes")
-	assertIterator(t, s.Forwards().Offset(0), 2, 3, 6, 1, 5, 4)
-}
-
 func assertIterator(t *testing.T, iterator Iterator, ids ...key.Type) {
 	defer iterator.Close()
 	spec := gspec.New(t)
