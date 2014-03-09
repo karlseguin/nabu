@@ -12,6 +12,7 @@ type Index interface {
 	Name() string
 	Len() int
 	SetInt(id key.Type, score int)
+	SetString(id key.Type, score string)
 	Remove(id key.Type)
 	Contains(id key.Type) (int, bool)
 	GetRank(score int, first bool) int
@@ -36,9 +37,12 @@ type Iterator interface {
 }
 
 // Creates the index
-func NewIndex(name string, set bool) Index {
+func NewIndex(name string, set bool, isString bool) Index {
 	if set {
 		return newSet(name)
+	}
+	if isString {
+		return newSortedSet(name)
 	}
 	return newSkiplist(name)
 }

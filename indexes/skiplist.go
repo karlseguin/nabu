@@ -116,6 +116,10 @@ func (s *Skiplist) SetInt(id key.Type, score int) {
 	s.setInt(id, score)
 }
 
+func (s *Skiplist) SetString(id key.Type, score string) {
+	panic("Cannot call SetString on skiplist")
+}
+
 // Removes the id from the index
 func (s *Skiplist) Remove(id key.Type) {
 	s.lock.Lock()

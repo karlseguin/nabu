@@ -38,7 +38,7 @@ func TestSetContainsAnExistingId(t *testing.T) {
 }
 
 func makeSetIndex(ids ...int) indexes.Index {
-	set := indexes.NewIndex("test", true)
+	set := indexes.NewIndex("test", true, false)
 	for _, id := range ids {
 		set.SetInt(key.Type(id), 0)
 	}

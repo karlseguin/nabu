@@ -42,6 +42,10 @@ func (s *Set) SetInt(id key.Type, score int) {
 	s.addId(id)
 }
 
+func (s *Set) SetString(id key.Type, score string) {
+	panic("Cannot call SetString on set")
+}
+
 func (s *Set) Remove(id key.Type) {
 	s.lock.RLock()
 	_, exists := s.lookup[id]

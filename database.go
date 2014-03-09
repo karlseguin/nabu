@@ -138,7 +138,7 @@ func (d *Database) Update(doc Document) {
 	for name, score := range meta.iIndexes {
 		delete(oldMeta.iIndexes, name)
 		_, isSet := meta.sets[name]
-		index := d.getOrCreateIndex(name, isSet)
+		index := d.getOrCreateIndex(name, isSet, false)
 		index.SetInt(id, score)
 	}
 	for name, _ := range oldMeta.iIndexes {
@@ -147,16 +147,16 @@ func (d *Database) Update(doc Document) {
 		}
 	}
 
-	// for name, score := range meta.sIndexes {
-	// 	delete(oldMeta.mIndexes, name)
-	// 	index := d.getOrCreateIndex(name, false, true)
-	// 	index.SetString(id, score)
-	// }
-	// for name, _ := range oldMeta.sIndexes {
-	// 	if index, exists := d.getIndex(name); exists {
-	// 		index.Remove(id)
-	// 	}
-	// }
+	for name, score := range meta.sIndexes {
+		delete(oldMeta.sIndexes, name)
+		index := d.getOrCreateIndex(name, false, true)
+		index.SetString(id, score)
+	}
+	for name, _ := range oldMeta.sIndexes {
+		if index, exists := d.getIndex(name); exists {
+			index.Remove(id)
+		}
+	}
 
 	if d.loading == false {
 		idBuffer := id.Serialize()
@@ -175,6 +175,11 @@ func (d *Database) Remove(doc Document) {
 	doc.ReadMeta(meta)
 	id, stringId := meta.getId()
 	for name, _ := range meta.iIndexes {
+		if index, exists := d.getIndex(name); exists {
+			index.Remove(id)
+		}
+	}
+	for name, _ := range meta.sIndexes {
 		if index, exists := d.getIndex(name); exists {
 			index.Remove(id)
 		}
@@ -244,7 +249,7 @@ func (d *Database) getBucket(key key.Type) *Bucket {
 }
 
 // Gets the sort index, or creates it if it doesn't already exists
-func (d *Database) getOrCreateIndex(name string, isSet bool) indexes.Index {
+func (d *Database) getOrCreateIndex(name string, isSet bool, isString bool) indexes.Index {
 	index, exists := d.getIndex(name)
 	if exists {
 		return index
@@ -254,7 +259,7 @@ func (d *Database) getOrCreateIndex(name string, isSet bool) indexes.Index {
 	defer d.indexLock.Unlock()
 	index, exists = d.indexes[name]
 	if exists == false {
-		index = indexes.NewIndex(name, isSet)
+		index = indexes.NewIndex(name, isSet, isString)
 		d.indexes[name] = index
 	}
 	return index

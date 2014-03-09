@@ -150,7 +150,7 @@ func SmallDB() *Database {
 	db := New(SmallConfig())
 	defer db.Close()
 	makeIndex(db, "created", 0)
-	addIndex(db, indexes.NewIndex("age", false))
+	addIndex(db, indexes.NewIndex("age", false, false))
 	return db
 }
 
