@@ -332,8 +332,8 @@ func (s *Skiplist) Forwards() Iterator {
 func (s *Skiplist) Backwards() Iterator {
 	s.lock.RLock()
 	return &SkiplistBackwardsIterator{
-		node: s.tail.prev,
 		list: s,
+		node: s.tail.prev,
 		from: s.head.next[0].score,
 	}
 }

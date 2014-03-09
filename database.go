@@ -147,6 +147,17 @@ func (d *Database) Update(doc Document) {
 		}
 	}
 
+	// for name, score := range meta.sIndexes {
+	// 	delete(oldMeta.mIndexes, name)
+	// 	index := d.getOrCreateIndex(name, false, true)
+	// 	index.SetString(id, score)
+	// }
+	// for name, _ := range oldMeta.sIndexes {
+	// 	if index, exists := d.getIndex(name); exists {
+	// 		index.Remove(id)
+	// 	}
+	// }
+
 	if d.loading == false {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
