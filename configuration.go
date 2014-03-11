@@ -1,9 +1,5 @@
 package nabu
 
-import (
-	"time"
-)
-
 // Configuration option for a Database. Exposes as a fluent-interface
 // which begins by calling nabu.Configure()
 type Configuration struct {
@@ -11,6 +7,7 @@ type Configuration struct {
 	maxTotal               int
 	skipLoad               bool
 	dbPath                 string
+	persist                bool
 	iFactory               IntFactory
 	sFactory               StringFactory
 	bucketCount            int
@@ -21,7 +18,6 @@ type Configuration struct {
 	maxIndexesPerQuery     int
 	sortedResultPoolSize   int
 	unsortedResultPoolSize int
-	maxCacheStaleness      time.Duration
 }
 
 // Begins the configuration process.
@@ -39,7 +35,7 @@ func Configure() *Configuration {
 		maxIndexesPerQuery:     10,
 		sortedResultPoolSize:   512,
 		unsortedResultPoolSize: 512,
-		maxCacheStaleness:      time.Minute * 10,
+		persist:                true,
 	}
 }
 
@@ -120,19 +116,20 @@ func (c *Configuration) SkipLoad() *Configuration {
 	return c
 }
 
-// Instructs the database to not load data from disk on startup
-func (c *Configuration) MaxCacheStaleness(duration time.Duration) *Configuration {
-	c.maxCacheStaleness = duration
+// Does not persist changes to disk (this also disables loading)
+func (c *Configuration) NoPersistence() *Configuration {
+	c.persist = false
+	c.skipLoad = true
 	return c
 }
 
-// Instructs the database to not load data from disk on startup
+// The factory used to rehydrate objects on startup (when the id is a string)
 func (c *Configuration) StringFactory(factory StringFactory) *Configuration {
 	c.sFactory = factory
 	return c
 }
 
-// Instructs the database to not load data from disk on startup
+// The factory used to rehydrate objects on startup (when the id is an int)
 func (c *Configuration) IntFactory(factory IntFactory) *Configuration {
 	c.iFactory = factory
 	return c

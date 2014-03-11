@@ -1,6 +1,8 @@
 // Persistence layer for Nabu
 package storage
 
+var NullStorage = new(nullStorage)
+
 // storage engine interface
 type Storage interface {
 	// Closes the storage engine
@@ -26,4 +28,23 @@ type Iterator interface {
 // Creates a new storage isntance
 func New(path string) Storage {
 	return newLeveldb(path)
+}
+
+type nullStorage struct {
+}
+
+func (s *nullStorage) Close() error {
+	return nil
+}
+
+func (s *nullStorage) Remove(id []byte) {
+
+}
+
+func (s *nullStorage) Put(id, value []byte) {
+
+}
+
+func (s *nullStorage) Iterator() Iterator {
+	return nil
 }

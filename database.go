@@ -65,14 +65,20 @@ func New(c *Configuration) *Database {
 	db := &Database{
 		Configuration:   c,
 		indexes:         make(map[string]indexes.Index),
-		dStorage:        storage.New(c.dbPath + "documents"),
-		mStorage:        storage.New(c.dbPath + "idmap"),
 		queryPool:       make(chan *NormalQuery, c.queryPoolSize),
 		buckets:         make(map[int]*Bucket, c.bucketCount),
 		sortedResults:   make(chan *SortedResult, c.sortedResultPoolSize),
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
 		idMap:           newIdMap(),
 	}
+	if c.persist {
+		db.dStorage = storage.New(c.dbPath + "documents")
+		db.mStorage = storage.New(c.dbPath + "idmap")
+	} else {
+		db.dStorage = storage.NullStorage
+		db.mStorage = storage.NullStorage
+	}
+
 	for i := 0; i < int(c.bucketCount); i++ {
 		db.buckets[i] = &Bucket{lookup: make(map[key.Type]Document)}
 	}
