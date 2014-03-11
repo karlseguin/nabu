@@ -164,7 +164,7 @@ func TestQueryWithNoIndexesIncludesTotalCount(t *testing.T) {
 
 func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
 	spec := gspec.New(t)
-	db := New(SmallConfig().CacheWorkers(0).MaxTotal(4))
+	db := New(SmallConfig().MaxTotal(4))
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Limit(2).IncludeTotal().Execute()
@@ -174,7 +174,7 @@ func TestQueryWithNoIndexesLimitsTheTotalCount(t *testing.T) {
 
 func TestQueryWithNoIndexesFiltersTheTotalCount(t *testing.T) {
 	spec := gspec.New(t)
-	db := New(SmallConfig().CacheWorkers(0))
+	db := New(SmallConfig())
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Where("created", GT(2)).Limit(2).IncludeTotal().Execute()
@@ -193,7 +193,7 @@ func TestQueryWithNoIndexesWithFilter(t *testing.T) {
 
 func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
 	spec := gspec.New(t)
-	db := New(SmallConfig().CacheWorkers(0).MaxTotal(4))
+	db := New(SmallConfig().MaxTotal(4))
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Desc().Limit(2).Desc().IncludeTotal().Execute()
@@ -372,7 +372,7 @@ func TestQueryBySortIncludesTotalDesc(t *testing.T) {
 
 func TestQueryBySortLimitsTheTotal(t *testing.T) {
 	spec := gspec.New(t)
-	db := New(SmallConfig().CacheWorkers(0).MaxTotal(3))
+	db := New(SmallConfig().MaxTotal(3))
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 	makeIndex(db, "a", 2, 3, 6, 8, 7, 11, 100)
@@ -383,7 +383,7 @@ func TestQueryBySortLimitsTheTotal(t *testing.T) {
 
 func TestQueryBySortLimitsTheTotalDesc(t *testing.T) {
 	spec := gspec.New(t)
-	db := New(SmallConfig().CacheWorkers(0).MaxTotal(3))
+	db := New(SmallConfig().MaxTotal(3))
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 	makeIndex(db, "a", 2, 3, 6, 8, 7, 11, 100)

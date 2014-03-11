@@ -12,7 +12,6 @@ type Configuration struct {
 	sFactory               StringFactory
 	bucketCount            int
 	defaultLimit           int
-	cacheWorkers           int
 	queryPoolSize          int
 	maxUnsortedSize        int
 	maxIndexesPerQuery     int
@@ -27,7 +26,6 @@ func Configure() *Configuration {
 		maxTotal:               1000,
 		skipLoad:               false,
 		bucketCount:            25,
-		cacheWorkers:           2,
 		defaultLimit:           10,
 		dbPath:                 "./data/",
 		queryPoolSize:          512,
@@ -98,15 +96,6 @@ func (c *Configuration) ResultsPoolSize(sorted, unsorted int) *Configuration {
 // The maximum number of indexes allowed for a given query
 func (c *Configuration) MaxIndexesPerQuery(max int) *Configuration {
 	c.maxIndexesPerQuery = max
-	return c
-}
-
-// The number of goroutines which should process cache generation
-// and cache update requests. Setting this to 0 will lock the database.
-// Workers build and maintain cached index. An additional goroutine is used
-// to cleanup non-recently used cached indexes
-func (c *Configuration) CacheWorkers(workers int) *Configuration {
-	c.cacheWorkers = workers
 	return c
 }
 
