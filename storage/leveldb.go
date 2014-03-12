@@ -30,7 +30,7 @@ func (l *Leveldb) Remove(id []byte) {
 
 func (l *Leveldb) Iterator() Iterator {
 	return &LeveldbIterator{
-		inner: l.db.NewIterator(nil),
+		inner: l.db.NewIterator(nil, nil),
 	}
 }
 
