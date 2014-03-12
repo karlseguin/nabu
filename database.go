@@ -44,6 +44,8 @@ allows you to infer the type based on the id).
 type IntFactory func(id uint, t string, data []byte) Document
 type StringFactory func(id string, stringId uint, t string, data []byte) Document
 
+var EmptyIndex = indexes.NewIndex("_empty_", true, false)
+
 // Database is the primary point of interaction with Nabu
 type Database struct {
 	loading bool
@@ -311,17 +313,16 @@ func (d *Database) restore() {
 
 // Callback used to load indexes from index names
 func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bool {
-	ok := true
 	d.indexLock.RLock()
 	d.indexLock.RUnlock()
 	for i, name := range indexNames {
-		index, exists := d.indexes[name]
-		target[i] = index
-		if exists == false {
-			ok = false
+		if index, exists := d.indexes[name]; exists {
+			target[i] = index
+		} else {
+			target[i] = EmptyIndex
 		}
 	}
-	return ok
+	return true
 }
 
 // Serialize type + values to be passed to the storage engine
