@@ -20,7 +20,7 @@ func TestSerializesAnInt(t *testing.T) {
 	spec := gspec.New(t)
 	buffer := Type(43449).Serialize()
 	defer buffer.Close()
-	spec.ExpectBytes(buffer.Bytes()).ToEqual(185, 211, 2, 0, 0, 0, 0, 0, 0, 0)
+	spec.ExpectBytes(buffer.Bytes()).ToEqual([]byte{185, 211, 2, 0, 0, 0, 0, 0, 0, 0})
 }
 
 func TestDeserializesAnint(t *testing.T) {
