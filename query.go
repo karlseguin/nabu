@@ -61,6 +61,9 @@ func (q *NormalQuery) Set(indexName, value string) Query {
 
 // Filter on an a union of set values (tag1 || tag2 || tag3).
 func (q *NormalQuery) Union(indexName string, values ...string) Query {
+	if len(values) == 1 {
+		return q.Set(indexName, values[0])
+	}
 	condition := conditions.NewUnion(values)
 	for _, value := range values {
 		q.indexNames[q.indexCount] = indexName + "=" + value
