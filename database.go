@@ -166,7 +166,7 @@ func (d *Database) Update(doc Document) {
 		}
 	}
 
-	if d.loading == false {
+	if d.loading == false && d.persist {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
 		d.dStorage.Put(idBuffer.Bytes(), serializeValue(meta.t, doc))
