@@ -83,9 +83,15 @@ func (s *SortedSet) Remove(id key.Type) {
 }
 
 func (s *SortedSet) remove(item *SortedItem) {
-	list := make([]*SortedItem, len(s.list)-1)
+	length := int64(len(s.list))-1
+	list := make([]*SortedItem, length)
 	copy(list, s.list[:item.rank])
-	copy(list[item.rank:], s.list[item.rank+1:])
+	for i := item.rank; i < length; i++ {
+		item := s.list[i+1]
+		item.rank--
+		list[i] = item
+	}
+
 	s.lock.Lock()
 	s.list = list
 	delete(s.lookup, item.id)

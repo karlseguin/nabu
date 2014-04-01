@@ -49,6 +49,18 @@ func TestSortedSetOrderOnRemove(t *testing.T) {
 	spec.Expect(s.Len()).ToEqual(2)
 }
 
+func TestSortedSetOrderOnRemoveX(t *testing.T) {
+	spec := gspec.New(t)
+	s := newSortedSet("test")
+	sortedSetLoad(s, 1, "banana", 2, "apples", 3, "oranges", 4, "zebra", 5, "zz")
+	s.Remove(key.Type(1))
+	s.Remove(key.Type(4))
+	s.Remove(key.Type(5))
+	spec.Expect(s.list[1].id).ToEqual(key.Type(2))
+	spec.Expect(s.list[2].id).ToEqual(key.Type(3))
+	spec.Expect(s.Len()).ToEqual(2)
+}
+
 func TestSortedSetContains(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSortedSet("test")
@@ -57,7 +69,7 @@ func TestSortedSetContains(t *testing.T) {
 	s.SetString(key.Type(4), "apes")
 	s.Remove(1)
 	spec.Expect(s.Contains(key.Type(1))).ToEqual(0)
-	spec.Expect(s.Contains(key.Type(3))).ToEqual(4)
+	spec.Expect(s.Contains(key.Type(3))).ToEqual(3)
 }
 
 func TestSortedSetForwardsIterator(t *testing.T) {

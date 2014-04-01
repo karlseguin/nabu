@@ -42,7 +42,7 @@ allows you to infer the type based on the id).
    }
 */
 type IntFactory func(id uint, t string, data []byte) Document
-type StringFactory func(id string, stringId uint, t string, data []byte) Document
+type StringFactory func(stringId string, id uint, t string, data []byte) Document
 
 var EmptyIndex = indexes.NewIndex("_empty_", true, false)
 

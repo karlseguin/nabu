@@ -60,9 +60,10 @@ func TestUnsortedResultCanBeSortedToALimitWithOffset(t *testing.T) {
 	result.add(2, 2)
 	result.add(3, 9001)
 	result.finalize(&NormalQuery{limit: 2, offset: 1})
-	spec.Expect(result.Len()).ToEqual(1)
-	spec.Expect(len(result.Ids())).ToEqual(1)
+	spec.Expect(result.Len()).ToEqual(2)
+	spec.Expect(len(result.Ids())).ToEqual(2)
 	spec.Expect(result.Ids()[0]).ToEqual(uint(1))
+	spec.Expect(result.Ids()[1]).ToEqual(uint(3))
 }
 
 func TestUnsortedResultCanBeSortedToALimitWithOffsetDesc(t *testing.T) {
