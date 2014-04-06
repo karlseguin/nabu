@@ -7,6 +7,7 @@ import (
 	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/storage"
 	"sync"
+	"bytes"
 )
 
 /*
@@ -342,12 +343,9 @@ func serializeValue(t string, value interface{}) []byte {
 
 // Deserialize type  + value from the storage engine
 func deserializeValue(data []byte) (string, []byte) {
-	typeLength := data[0]
-	if typeLength == 0 {
-		return "", data[1:]
-	}
-	t := string(data[1 : typeLength+1])
-	return t, data[typeLength+1:]
+	index := bytes.Index(data, []byte{'|'})
+	t := string(data[:index])
+	return t, data[index+1:]
 }
 
 // Serialize values to be passed to the storage engine

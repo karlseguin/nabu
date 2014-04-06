@@ -2,6 +2,7 @@ package key
 
 import (
 	"encoding/binary"
+	"strconv"
 	"github.com/karlseguin/nabu/bytepool"
 )
 
@@ -27,6 +28,10 @@ func (t Type) Serialize() BytesCloser {
 
 // Deserializes the key from storage
 func Deserialize(raw []byte) uint {
+	if raw[0] == '|' {
+		value, _ := strconv.Atoi(string(raw[1:]))
+		return uint(value)
+	}
 	value, _ := binary.Uvarint(raw)
 	return uint(value)
 }
