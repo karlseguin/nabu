@@ -75,7 +75,7 @@ func New(c *Configuration) *Database {
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
 		idMap:           newIdMap(),
 	}
-	if c.persist {
+	if c.persist || c.skipLoad == false {
 		db.dStorage = storage.New(c.dbPath + "documents")
 		db.mStorage = storage.New(c.dbPath + "idmap")
 	} else {
@@ -98,6 +98,12 @@ func New(c *Configuration) *Database {
 
 	if c.skipLoad == false {
 		db.restore()
+		if c.persist == false {
+			db.dStorage.Close()
+			db.mStorage.Close()
+			db.dStorage = storage.NullStorage
+			db.mStorage = storage.NullStorage
+		}
 	}
 	return db
 }
@@ -354,6 +360,9 @@ func serializeValue(t string, value interface{}) []byte {
 // Deserialize type  + value from the storage engine
 func deserializeValue(data []byte) (string, []byte) {
 	index := bytes.Index(data, []byte{'|'})
+	if index == -1 {
+		return "", data
+	}
 	t := string(data[:index])
 	return t, data[index+1:]
 }

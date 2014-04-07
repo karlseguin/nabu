@@ -155,7 +155,7 @@ func SmallDB() *Database {
 }
 
 func SmallConfig() *Configuration {
-	return Configure().QueryPoolSize(1).ResultsPoolSize(1, 1).NoPersistence()
+	return Configure().QueryPoolSize(1).ResultsPoolSize(1, 1).NoPersistence().SkipLoad()
 }
 
 func addIndex(db *Database, index indexes.Index) {
