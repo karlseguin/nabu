@@ -17,7 +17,7 @@ func NewSet(value string) *Set {
 }
 
 func (c *Set) Key() string {
-	return "in" + c.value
+	return "set(" + c.value + ")"
 }
 
 func (c *Set) On(index indexes.Index) {

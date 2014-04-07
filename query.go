@@ -53,9 +53,7 @@ func newQuery(db *Database) Query {
 
 // Filter on a set.
 func (q *NormalQuery) Set(indexName, value string) Query {
-	q.indexNames[q.indexCount] = indexName + "=" + value
-	q.conditions[q.indexCount] = conditions.NewSet(value)
-	q.indexCount++
+	q.addIndex(indexName + "=" + value, conditions.NewSet(value))
 	return q
 }
 
@@ -66,9 +64,9 @@ func (q *NormalQuery) Union(indexName string, values ...string) Query {
 	}
 	condition := conditions.NewUnion(values)
 	for _, value := range values {
-		q.indexNames[q.indexCount] = indexName + "=" + value
-		q.conditions[q.indexCount] = condition
-		q.indexCount++
+		if q.addIndex(indexName + "=" + value, condition) == false {
+			return q
+		}
 	}
 	return q
 }
@@ -82,11 +80,19 @@ func (q *NormalQuery) Where(indexName string, condition Condition) Query {
 	if indexName == q.sort.Name() {
 		q.sortCondition = condition
 	} else {
-		q.indexNames[q.indexCount] = indexName
-		q.conditions[q.indexCount] = condition
-		q.indexCount++
+		q.addIndex(indexName, condition)
 	}
 	return q
+}
+
+func (q *NormalQuery) addIndex(indexName string, condition Condition) bool {
+	if q.indexCount == q.db.maxIndexesPerQuery {
+		return false
+	}
+	q.indexNames[q.indexCount] = indexName
+	q.conditions[q.indexCount] = condition
+	q.indexCount++
+	return true
 }
 
 // Don't cache the result or use the cache to generate the result
