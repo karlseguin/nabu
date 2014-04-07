@@ -22,6 +22,7 @@ type Storage interface {
 type Iterator interface {
 	Close()
 	Next() bool
+	Error() error
 	Current() ([]byte, []byte)
 }
 

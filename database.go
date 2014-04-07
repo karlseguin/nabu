@@ -8,6 +8,7 @@ import (
 	"github.com/karlseguin/nabu/storage"
 	"sync"
 	"bytes"
+	"log"
 )
 
 /*
@@ -292,12 +293,17 @@ func (d *Database) restore() {
 			t, value := deserializeValue(typedValue)
 			d.Update(d.iFactory(key.Deserialize(id), t, value))
 		}
+		iter.Close()
 	} else {
 		lookup := make(map[uint]string)
 		iter := d.mStorage.Iterator()
 		for iter.Next() {
 			stringId, id := iter.Current()
 			lookup[key.Deserialize(id)] = string(stringId)
+		}
+		iter.Close()
+		if err := iter.Error(); err != nil {
+			log.Println(err)
 		}
 		d.idMap.load(lookup)
 
@@ -307,6 +313,10 @@ func (d *Database) restore() {
 			id := key.Deserialize(rawId)
 			t, value := deserializeValue(typedValue)
 			d.Update(d.sFactory(lookup[id], id, t, value))
+		}
+		iter.Close()
+		if err := iter.Error(); err != nil {
+			log.Println(err)
 		}
 	}
 	d.loading = false

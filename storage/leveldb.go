@@ -53,3 +53,7 @@ func (i *LeveldbIterator) Current() ([]byte, []byte) {
 func (i *LeveldbIterator) Close() {
 	i.inner.Release()
 }
+
+func (i *LeveldbIterator) Error() error {
+	return i.inner.Error()
+}
