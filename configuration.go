@@ -105,10 +105,9 @@ func (c *Configuration) SkipLoad() *Configuration {
 	return c
 }
 
-// Does not persist changes to disk (this also disables loading)
+// Does not persist changes to disk
 func (c *Configuration) NoPersistence() *Configuration {
 	c.persist = false
-	c.skipLoad = true
 	return c
 }
 
