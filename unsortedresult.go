@@ -88,7 +88,7 @@ func (r *UnsortedResult) finalize(q *NormalQuery) *UnsortedResult {
 	} else {
 		from := q.offset
 		to := r.found
-		if to > q.limit + from {
+		if to > q.limit+from {
 			to = q.limit
 		}
 		if from > to {

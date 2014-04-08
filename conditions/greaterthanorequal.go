@@ -7,20 +7,28 @@ import (
 )
 
 type GreaterThanOrEqual struct {
-	length int
-	value  int
-	index  indexes.Index
+	key       string
+	indexName string
+	length    int
+	value     int
+	index     indexes.Index
 }
 
-func NewGreaterThanOrEqual(value int) *GreaterThanOrEqual {
+func NewGreaterThanOrEqual(indexName string, value int) *GreaterThanOrEqual {
 	return &GreaterThanOrEqual{
-		length: -1,
-		value:  value,
+		length:    -1,
+		value:     value,
+		indexName: indexName,
+		key:       indexName + ">=" + strconv.Itoa(value),
 	}
 }
 
 func (c *GreaterThanOrEqual) Key() string {
-	return ">=" + strconv.Itoa(c.value)
+	return c.key
+}
+
+func (c *GreaterThanOrEqual) IndexName() string {
+	return c.indexName
 }
 
 func (c *GreaterThanOrEqual) On(index indexes.Index) {
@@ -52,4 +60,12 @@ func (c *GreaterThanOrEqual) CanIterate() bool {
 func (c *GreaterThanOrEqual) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)
+}
+
+func (c *GreaterThanOrEqual) RLock() {
+	c.index.RLock()
+}
+
+func (c *GreaterThanOrEqual) RUnlock() {
+	c.index.RUnlock()
 }

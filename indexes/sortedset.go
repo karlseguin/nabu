@@ -83,7 +83,7 @@ func (s *SortedSet) Remove(id key.Type) {
 }
 
 func (s *SortedSet) remove(item *SortedItem) {
-	length := int64(len(s.list))-1
+	length := int64(len(s.list)) - 1
 	list := make([]*SortedItem, length)
 	copy(list, s.list[:item.rank])
 	for i := item.rank; i < length; i++ {

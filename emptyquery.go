@@ -13,7 +13,7 @@ func (q *EmptyQuery) Set(index, value string) Query {
 func (q *EmptyQuery) Union(index string, values ...string) Query {
 	return q
 }
-func (q *EmptyQuery) Where(index string, condition Condition) Query {
+func (q *EmptyQuery) Where(condition Condition) Query {
 	return q
 }
 func (q *EmptyQuery) Desc() Query {

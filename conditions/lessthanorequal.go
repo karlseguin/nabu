@@ -7,20 +7,28 @@ import (
 )
 
 type LessThanOrEqual struct {
-	value  int
-	length int
-	index  indexes.Index
+	key       string
+	indexName string
+	value     int
+	length    int
+	index     indexes.Index
 }
 
-func NewLessThanOrEqual(value int) *LessThanOrEqual {
+func NewLessThanOrEqual(indexName string, value int) *LessThanOrEqual {
 	return &LessThanOrEqual{
-		length: -1,
-		value:  value,
+		length:    -1,
+		value:     value,
+		indexName: indexName,
+		key:       indexName + "<=" + strconv.Itoa(value),
 	}
 }
 
 func (c *LessThanOrEqual) Key() string {
-	return "<=" + strconv.Itoa(c.value)
+	return c.key
+}
+
+func (c *LessThanOrEqual) IndexName() string {
+	return c.indexName
 }
 
 func (c *LessThanOrEqual) On(index indexes.Index) {
@@ -52,4 +60,12 @@ func (c *LessThanOrEqual) CanIterate() bool {
 func (c *LessThanOrEqual) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)
+}
+
+func (c *LessThanOrEqual) RLock() {
+	c.index.RLock()
+}
+
+func (c *LessThanOrEqual) RUnlock() {
+	c.index.RUnlock()
 }

@@ -8,7 +8,7 @@ import (
 
 func TestBetweenReturnsTheLength(t *testing.T) {
 	spec := gspec.New(t)
-	bt := NewBetween(7, 11)
+	bt := NewBetween("x", 7, 11)
 	idx := makeIndex(1, 7, 8, 10, 11, 12, 13, 20)
 	idx.SetInt(key.Type(22), 10)
 	bt.On(idx)
@@ -17,14 +17,14 @@ func TestBetweenReturnsTheLength(t *testing.T) {
 
 func TestBetweenReturnsTheLengthWhenNone(t *testing.T) {
 	spec := gspec.New(t)
-	bt := NewBetween(223, 233)
+	bt := NewBetween("x", 223, 233)
 	bt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	spec.Expect(bt.Len()).ToEqual(0)
 }
 
 func TestBetweenDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
-	bt := NewBetween(10, 15)
+	bt := NewBetween("x", 10, 15)
 	bt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := bt.Contains(key.Type(22))
 	spec.Expect(exists).ToEqual(false)
@@ -32,7 +32,7 @@ func TestBetweenDoesNotContainANonExistantId(t *testing.T) {
 
 func TestBetweenDoesNotContainAnIdWithAScoreGreaterThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
-	bt := NewBetween(20, 250)
+	bt := NewBetween("x", 20, 250)
 	bt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := bt.Contains(key.Type(4))
 	spec.Expect(exists).ToEqual(false)
@@ -40,7 +40,7 @@ func TestBetweenDoesNotContainAnIdWithAScoreGreaterThanOurtarget(t *testing.T) {
 
 func TestBetweenDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
-	bt := NewBetween(-1, 0)
+	bt := NewBetween("x", -1, 0)
 	bt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := bt.Contains(key.Type(2))
 	spec.Expect(exists).ToEqual(false)
@@ -48,7 +48,7 @@ func TestBetweenDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 
 func TestBetweenContainsAnIdWithAScoreWithinOurTarget(t *testing.T) {
 	spec := gspec.New(t)
-	bt := NewBetween(7, 11)
+	bt := NewBetween("x", 7, 11)
 	bt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	score, exists := bt.Contains(key.Type(3))
 	spec.Expect(score).ToEqual(10)

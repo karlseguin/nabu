@@ -9,21 +9,27 @@ import (
 
 type Union struct {
 	key        string
+	indexName  string
 	indexCount int
 	values     []string
 	indexes    indexes.Indexes
 }
 
-func NewUnion(values []string) *Union {
+func NewUnion(indexName string, values []string) *Union {
 	return &Union{
-		values:  values,
-		indexes: make(indexes.Indexes, len(values)),
-		key:     "in(" + strings.Join(values, ",") + ")",
+		values:    values,
+		indexes:   make(indexes.Indexes, len(values)),
+		indexName: indexName,
+		key:       indexName + " in (" + strings.Join(values, ",") + ")",
 	}
 }
 
 func (c *Union) Key() string {
 	return c.key
+}
+
+func (c *Union) IndexName() string {
+	return c.indexName
 }
 
 func (c *Union) On(index indexes.Index) {
@@ -60,4 +66,12 @@ func (c *Union) CanIterate() bool {
 
 func (c *Union) Iterator() indexes.Iterator {
 	return nil
+}
+
+func (c *Union) RLock() {
+	c.indexes.RLock()
+}
+
+func (c *Union) RUnlock() {
+	c.indexes.RUnlock()
 }

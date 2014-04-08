@@ -7,22 +7,30 @@ import (
 )
 
 type Between struct {
-	length int
-	from   int
-	to     int
-	index  indexes.Index
+	key       string
+	indexName string
+	length    int
+	from      int
+	to        int
+	index     indexes.Index
 }
 
-func NewBetween(from, to int) *Between {
+func NewBetween(indexName string, from, to int) *Between {
 	return &Between{
-		length: -1,
-		from:   from,
-		to:     to,
+		length:    -1,
+		from:      from,
+		to:        to,
+		indexName: indexName,
+		key:       strconv.Itoa(from) + "<" + indexName + "<" + strconv.Itoa(to),
 	}
 }
 
 func (c *Between) Key() string {
-	return strconv.Itoa(c.from) + "<->" + strconv.Itoa(c.to)
+	return c.key
+}
+
+func (c *Between) IndexName() string {
+	return c.indexName
 }
 
 func (c *Between) On(index indexes.Index) {
@@ -55,4 +63,12 @@ func (c *Between) CanIterate() bool {
 func (c *Between) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)
+}
+
+func (c *Between) RLock() {
+	c.index.RLock()
+}
+
+func (c *Between) RUnlock() {
+	c.index.RUnlock()
 }

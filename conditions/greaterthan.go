@@ -7,20 +7,28 @@ import (
 )
 
 type GreaterThan struct {
-	length int
-	value  int
-	index  indexes.Index
+	key       string
+	indexName string
+	length    int
+	value     int
+	index     indexes.Index
 }
 
-func NewGreaterThan(value int) *GreaterThan {
+func NewGreaterThan(indexName string, value int) *GreaterThan {
 	return &GreaterThan{
-		length: -1,
-		value:  value,
+		length:    -1,
+		value:     value,
+		indexName: indexName,
+		key:       indexName + ">" + strconv.Itoa(value),
 	}
 }
 
 func (c *GreaterThan) Key() string {
-	return ">" + strconv.Itoa(c.value)
+	return c.key
+}
+
+func (c *GreaterThan) IndexName() string {
+	return c.indexName
 }
 
 func (c *GreaterThan) On(index indexes.Index) {
@@ -52,4 +60,12 @@ func (c *GreaterThan) CanIterate() bool {
 func (c *GreaterThan) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)
+}
+
+func (c *GreaterThan) RLock() {
+	c.index.RLock()
+}
+
+func (c *GreaterThan) RUnlock() {
+	c.index.RUnlock()
 }

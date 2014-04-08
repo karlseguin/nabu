@@ -9,21 +9,21 @@ import (
 
 func TestSetReturnsTheLength(t *testing.T) {
 	spec := gspec.New(t)
-	set := NewSet("10")
+	set := NewSet("x", "10")
 	set.On(makeSetIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	spec.Expect(set.Len()).ToEqual(8)
 }
 
 func TestSetReturnsTheLengthWhenNone(t *testing.T) {
 	spec := gspec.New(t)
-	set := NewSet("x")
+	set := NewSet("x", "x")
 	set.On(makeSetIndex())
 	spec.Expect(set.Len()).ToEqual(0)
 }
 
 func TestSetDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
-	set := NewSet("10")
+	set := NewSet("x", "10")
 	set.On(makeSetIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := set.Contains(key.Type(22))
 	spec.Expect(exists).ToEqual(false)
@@ -31,7 +31,7 @@ func TestSetDoesNotContainANonExistantId(t *testing.T) {
 
 func TestSetContainsAnExistingId(t *testing.T) {
 	spec := gspec.New(t)
-	set := NewSet("10")
+	set := NewSet("x", "10")
 	set.On(makeSetIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := set.Contains(key.Type(13))
 	spec.Expect(exists).ToEqual(true)

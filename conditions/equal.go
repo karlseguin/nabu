@@ -7,20 +7,28 @@ import (
 )
 
 type Equal struct {
-	length int
-	value  int
-	index  indexes.Index
+	key       string
+	indexName string
+	length    int
+	value     int
+	index     indexes.Index
 }
 
-func NewEqual(value int) *Equal {
+func NewEqual(indexName string, value int) *Equal {
 	return &Equal{
-		length: -1,
-		value:  value,
+		length:    -1,
+		value:     value,
+		indexName: indexName,
+		key:       indexName + "=" + strconv.Itoa(value),
 	}
 }
 
 func (c *Equal) Key() string {
-	return "=" + strconv.Itoa(c.value)
+	return c.key
+}
+
+func (c *Equal) IndexName() string {
+	return c.indexName
 }
 
 func (c *Equal) On(index indexes.Index) {
@@ -53,4 +61,12 @@ func (c *Equal) CanIterate() bool {
 func (c *Equal) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)
+}
+
+func (c *Equal) RLock() {
+	c.index.RLock()
+}
+
+func (c *Equal) RUnlock() {
+	c.index.RUnlock()
 }

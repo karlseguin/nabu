@@ -2,8 +2,8 @@ package key
 
 import (
 	"encoding/binary"
-	"strconv"
 	"github.com/karlseguin/nabu/bytepool"
+	"strconv"
 )
 
 var serializationPool = bytepool.New(256, binary.MaxVarintLen64)
