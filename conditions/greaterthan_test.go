@@ -9,14 +9,14 @@ import (
 
 func TestGreaterThanReturnsTheLength(t *testing.T) {
 	spec := gspec.New(t)
-	gt := NewGreaterThan(10)
+	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	spec.Expect(gt.Len()).ToEqual(4)
 }
 
 func TestGreaterThanDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
-	gt := NewGreaterThan(10)
+	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := gt.Contains(key.Type(22))
 	spec.Expect(exists).ToEqual(false)
@@ -24,7 +24,7 @@ func TestGreaterThanDoesNotContainANonExistantId(t *testing.T) {
 
 func TestGreaterThanDoesNotContainAnIdWithAScoreEqualToOurtarget(t *testing.T) {
 	spec := gspec.New(t)
-	gt := NewGreaterThan(10)
+	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := gt.Contains(key.Type(3))
 	spec.Expect(exists).ToEqual(false)
@@ -32,7 +32,7 @@ func TestGreaterThanDoesNotContainAnIdWithAScoreEqualToOurtarget(t *testing.T) {
 
 func TestGreaterThanDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
-	gt := NewGreaterThan(10)
+	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := gt.Contains(key.Type(2))
 	spec.Expect(exists).ToEqual(false)
@@ -40,7 +40,7 @@ func TestGreaterThanDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) 
 
 func TestGreaterThanContainsAnIdWithAScoreGreaterThanOurTarget(t *testing.T) {
 	spec := gspec.New(t)
-	gt := NewGreaterThan(10)
+	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	score, exists := gt.Contains(key.Type(4))
 	spec.Expect(score).ToEqual(11)

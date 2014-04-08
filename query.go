@@ -11,7 +11,7 @@ type Query interface {
 	NoCache() Query
 	Union(name string, values ...string) Query
 	Set(name, value string) Query
-	Where(index string, condition Condition) Query
+	Where(condition Condition) Query
 	Desc() Query
 	Limit(limit int) Query
 	Offset(offset int) Query
@@ -21,21 +21,19 @@ type Query interface {
 
 // Build and executes a query against the database
 type NormalQuery struct {
-	upto          int
-	limit         int
-	desc          bool
-	offset        int
-	cache         bool
-	db            *Database
-	sortLength    int
-	indexCount    int
-	includeTotal  bool
-	sortCondition Condition
-	sort          indexes.Index
-	ranged        bool
-	indexNames    []string
-	conditions    Conditions
-	indexes       indexes.Indexes
+	upto           int
+	limit          int
+	desc           bool
+	offset         int
+	cache          bool
+	db             *Database
+	sortLength     int
+	conditionCount int
+	includeTotal   bool
+	sortCondition  Condition
+	sort           indexes.Index
+	ranged         bool
+	conditions     Conditions
 }
 
 // Queries are statically created upfront and reused
@@ -43,9 +41,7 @@ func newQuery(db *Database) Query {
 	q := &NormalQuery{
 		db:         db,
 		cache:      true,
-		indexes:    make(indexes.Indexes, db.maxIndexesPerQuery),
-		indexNames: make([]string, db.maxIndexesPerQuery),
-		conditions: make(Conditions, db.maxIndexesPerQuery),
+		conditions: make(Conditions, db.maxConditionsPerQuery),
 	}
 	q.reset()
 	return q
@@ -53,7 +49,7 @@ func newQuery(db *Database) Query {
 
 // Filter on a set.
 func (q *NormalQuery) Set(indexName, value string) Query {
-	q.addIndex(indexName + "=" + value, conditions.NewSet(value))
+	q.addCondition(conditions.NewSet(indexName, value))
 	return q
 }
 
@@ -62,36 +58,30 @@ func (q *NormalQuery) Union(indexName string, values ...string) Query {
 	if len(values) == 1 {
 		return q.Set(indexName, values[0])
 	}
-	condition := conditions.NewUnion(values)
-	for _, value := range values {
-		if q.addIndex(indexName + "=" + value, condition) == false {
-			return q
-		}
-	}
+	q.addCondition(conditions.NewUnion(indexName, values))
 	return q
 }
 
 // Filter results for the query and value. Where can be called multiple
 // times. Each must have an even number of parameters (indexName, value):
 //
-//    Where("age", nabu.GT(10))
+//    Where(nabu.GT("age", 10))
 //
-func (q *NormalQuery) Where(indexName string, condition Condition) Query {
-	if indexName == q.sort.Name() {
+func (q *NormalQuery) Where(condition Condition) Query {
+	if condition.IndexName() == q.sort.Name() {
 		q.sortCondition = condition
 	} else {
-		q.addIndex(indexName, condition)
+		q.addCondition(condition)
 	}
 	return q
 }
 
-func (q *NormalQuery) addIndex(indexName string, condition Condition) bool {
-	if q.indexCount == q.db.maxIndexesPerQuery {
+func (q *NormalQuery) addCondition(condition Condition) bool {
+	if q.conditionCount == q.db.maxConditionsPerQuery {
 		return false
 	}
-	q.indexNames[q.indexCount] = indexName
-	q.conditions[q.indexCount] = condition
-	q.indexCount++
+	q.conditions[q.conditionCount] = condition
+	q.conditionCount++
 	return true
 }
 
@@ -152,32 +142,24 @@ func (q *NormalQuery) Execute() Result {
 	}
 	q.sort.RUnlock()
 
-	indexCount := q.indexCount
-	if indexCount == 0 {
+	conditionCount := q.conditionCount
+	if conditionCount == 0 {
 		return q.findWithNoIndexes()
 	}
 
-	if q.prepareConditions() == false {
-		return EmptyResult
-	}
-	defer q.indexes[0:indexCount].RUnlock()
+	q.prepareConditions()
+	defer q.conditions[:conditionCount].RUnlock()
 	return q.execute()
 }
 
 // Loads the indexes used by the query
-func (q *NormalQuery) prepareConditions() bool {
-	indexCount := q.indexCount
-	if q.db.LookupIndexes(q.indexNames[0:indexCount], q.indexes) == false {
-		return false
+func (q *NormalQuery) prepareConditions() {
+	conditionCount := q.conditionCount
+	q.db.LoadIndexes(q.conditions[:conditionCount])
+	q.conditions[:conditionCount].RLock()
+	if conditionCount > 1 {
+		sort.Sort(q.conditions[:conditionCount])
 	}
-	q.indexes[0:indexCount].RLock()
-	for i := 0; i < indexCount; i++ {
-		q.conditions[i].On(q.indexes[i])
-	}
-	if indexCount > 1 {
-		sort.Sort(q.conditions[0:indexCount])
-	}
-	return true
 }
 
 // Determines wether an index-based query will be used or a sort-based query.
@@ -236,7 +218,7 @@ func (q *NormalQuery) findWithNoIndexes() Result {
 func (q *NormalQuery) findBySort() Result {
 	found := 0
 	limit := q.limit
-	indexCount := q.indexCount
+	conditionCount := q.conditionCount
 	var iterator indexes.Iterator
 
 	result := <-q.db.sortedResults
@@ -250,7 +232,7 @@ func (q *NormalQuery) findBySort() Result {
 	}
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
-		for j := 0; j < indexCount; j++ {
+		for j := 0; j < conditionCount; j++ {
 			if _, exists := q.conditions[j].Contains(id); exists == false {
 				goto nomatchdesc
 			}
@@ -277,7 +259,7 @@ func (q *NormalQuery) findBySort() Result {
 // Filter by indexes, then sort. Ideal when the smallest index is quite a bit
 // smaller than the sort index
 func (q *NormalQuery) findByIndex() Result {
-	indexCount := q.indexCount
+	conditionCount := q.conditionCount
 	result := <-q.db.unsortedResults
 
 	var sort Container
@@ -292,7 +274,7 @@ func (q *NormalQuery) findByIndex() Result {
 	defer iterator.Close()
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
-		for j := 1; j < indexCount; j++ {
+		for j := 1; j < conditionCount; j++ {
 			if _, exists := q.conditions[j].Contains(id); exists == false {
 				goto nomatch
 			}
@@ -311,7 +293,7 @@ func (q *NormalQuery) reset() {
 	q.offset = 0
 	q.cache = true
 	q.desc = false
-	q.indexCount = 0
+	q.conditionCount = 0
 	q.ranged = false
 	q.includeTotal = false
 	q.sortCondition = nil

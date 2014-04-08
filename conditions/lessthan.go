@@ -7,20 +7,28 @@ import (
 )
 
 type LessThan struct {
-	value  int
-	length int
-	index  indexes.Index
+	key       string
+	indexName string
+	value     int
+	length    int
+	index     indexes.Index
 }
 
-func NewLessThan(value int) *LessThan {
+func NewLessThan(indexName string, value int) *LessThan {
 	return &LessThan{
-		length: -1,
-		value:  value,
+		length:    -1,
+		value:     value,
+		indexName: indexName,
+		key:       indexName + "<" + strconv.Itoa(value),
 	}
 }
 
 func (c *LessThan) Key() string {
-	return "<" + strconv.Itoa(c.value)
+	return c.key
+}
+
+func (c *LessThan) IndexName() string {
+	return c.indexName
 }
 
 func (c *LessThan) On(index indexes.Index) {
@@ -52,4 +60,12 @@ func (c *LessThan) CanIterate() bool {
 func (c *LessThan) Iterator() indexes.Iterator {
 	iterator := c.index.Forwards()
 	return iterator.Range(c.Range()).Offset(0)
+}
+
+func (c *LessThan) RLock() {
+	c.index.RLock()
+}
+
+func (c *LessThan) RUnlock() {
+	c.index.RUnlock()
 }

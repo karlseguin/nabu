@@ -2,13 +2,13 @@
 package nabu
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/karlseguin/nabu/indexes"
 	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/storage"
-	"sync"
-	"bytes"
 	"log"
+	"sync"
 )
 
 /*
@@ -333,17 +333,16 @@ func (d *Database) restore() {
 }
 
 // Callback used to load indexes from index names
-func (d *Database) LookupIndexes(indexNames []string, target indexes.Indexes) bool {
+func (d *Database) LoadIndexes(conditions Conditions) {
 	d.indexLock.RLock()
-	d.indexLock.RUnlock()
-	for i, name := range indexNames {
-		if index, exists := d.indexes[name]; exists {
-			target[i] = index
+	defer d.indexLock.RUnlock()
+	for _, condition := range conditions {
+		if index, exists := d.indexes[condition.IndexName()]; exists {
+			condition.On(index)
 		} else {
-			target[i] = EmptyIndex
+			condition.On(EmptyIndex)
 		}
 	}
-	return true
 }
 
 // Serialize type + values to be passed to the storage engine

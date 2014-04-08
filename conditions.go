@@ -14,15 +14,32 @@ type Container interface {
 type Condition interface {
 	Key() string
 	Len() int
+	IndexName() string
 	On(index indexes.Index)
 	Contains(id key.Type) (int, bool)
 	Range() (int, int)
 	CanIterate() bool
 	Iterator() indexes.Iterator
+	RLock()
+	RUnlock()
 }
 
 // An array of condition
 type Conditions []Condition
+
+// Read locks all the conditions
+func (conditions Conditions) RLock() {
+	for _, condition := range conditions {
+		condition.RLock()
+	}
+}
+
+// Read unlocks all the conditions
+func (conditions Conditions) RUnlock() {
+	for _, condition := range conditions {
+		condition.RUnlock()
+	}
+}
 
 // The number of items in our array of set
 func (c Conditions) Len() int {
@@ -39,26 +56,26 @@ func (c Conditions) Swap(i, j int) {
 	c[i], c[j] = c[j], c[i]
 }
 
-func GT(value int) Condition {
-	return conditions.NewGreaterThan(value)
+func GT(indexName string, value int) Condition {
+	return conditions.NewGreaterThan(indexName, value)
 }
 
-func GTE(value int) Condition {
-	return conditions.NewGreaterThanOrEqual(value)
+func GTE(indexName string, value int) Condition {
+	return conditions.NewGreaterThanOrEqual(indexName, value)
 }
 
-func LT(value int) Condition {
-	return conditions.NewLessThan(value)
+func LT(indexName string, value int) Condition {
+	return conditions.NewLessThan(indexName, value)
 }
 
-func LTE(value int) Condition {
-	return conditions.NewLessThanOrEqual(value)
+func LTE(indexName string, value int) Condition {
+	return conditions.NewLessThanOrEqual(indexName, value)
 }
 
-func EQ(value int) Condition {
-	return conditions.NewEqual(value)
+func EQ(indexName string, value int) Condition {
+	return conditions.NewEqual(indexName, value)
 }
 
-func Between(from, to int) Condition {
-	return conditions.NewBetween(from, to)
+func Between(indexName string, from, to int) Condition {
+	return conditions.NewBetween(indexName, from, to)
 }

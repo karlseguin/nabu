@@ -14,7 +14,7 @@ type Configuration struct {
 	defaultLimit           int
 	queryPoolSize          int
 	maxUnsortedSize        int
-	maxIndexesPerQuery     int
+	maxConditionsPerQuery  int
 	sortedResultPoolSize   int
 	unsortedResultPoolSize int
 }
@@ -30,7 +30,7 @@ func Configure() *Configuration {
 		dbPath:                 "./data/",
 		queryPoolSize:          512,
 		maxUnsortedSize:        5000,
-		maxIndexesPerQuery:     10,
+		maxConditionsPerQuery:  10,
 		sortedResultPoolSize:   512,
 		unsortedResultPoolSize: 512,
 		persist:                true,
@@ -93,9 +93,9 @@ func (c *Configuration) ResultsPoolSize(sorted, unsorted int) *Configuration {
 	return c
 }
 
-// The maximum number of indexes allowed for a given query
-func (c *Configuration) MaxIndexesPerQuery(max int) *Configuration {
-	c.maxIndexesPerQuery = max
+// The maximum number of conditions allowed for a given query
+func (c *Configuration) MaxConditionsPerQuery(max int) *Configuration {
+	c.maxConditionsPerQuery = max
 	return c
 }
 

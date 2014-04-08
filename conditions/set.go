@@ -6,18 +6,26 @@ import (
 )
 
 type Set struct {
-	value string
-	index indexes.Index
+	key       string
+	indexName string
+	value     string
+	index     indexes.Index
 }
 
-func NewSet(value string) *Set {
+func NewSet(indexName string, value string) *Set {
 	return &Set{
-		value: value,
+		value:     value,
+		indexName: indexName,
+		key:       indexName + "=s=" + value,
 	}
 }
 
 func (c *Set) Key() string {
-	return "set(" + c.value + ")"
+	return c.key
+}
+
+func (c *Set) IndexName() string {
+	return c.indexName
 }
 
 func (c *Set) On(index indexes.Index) {
@@ -45,4 +53,12 @@ func (c *Set) CanIterate() bool {
 
 func (c *Set) Iterator() indexes.Iterator {
 	return c.index.Forwards()
+}
+
+func (c *Set) RLock() {
+	c.index.RLock()
+}
+
+func (c *Set) RUnlock() {
+	c.index.RUnlock()
 }

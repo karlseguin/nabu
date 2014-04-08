@@ -8,7 +8,7 @@ import (
 
 func TestEqualReturnsTheLength(t *testing.T) {
 	spec := gspec.New(t)
-	eq := NewEqual(10)
+	eq := NewEqual("x", 10)
 	idx := makeIndex(1, 7, 8, 10, 11, 12, 13, 20)
 	idx.SetInt(key.Type(22), 10)
 	eq.On(idx)
@@ -17,14 +17,14 @@ func TestEqualReturnsTheLength(t *testing.T) {
 
 func TestEqualReturnsTheLengthWhenNone(t *testing.T) {
 	spec := gspec.New(t)
-	eq := NewEqual(223)
+	eq := NewEqual("x", 223)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	spec.Expect(eq.Len()).ToEqual(0)
 }
 
 func TestEqualDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
-	eq := NewEqual(10)
+	eq := NewEqual("x", 10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := eq.Contains(key.Type(22))
 	spec.Expect(exists).ToEqual(false)
@@ -32,7 +32,7 @@ func TestEqualDoesNotContainANonExistantId(t *testing.T) {
 
 func TestEqualDoesNotContainAnIdWithAScoreGreaterThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
-	eq := NewEqual(10)
+	eq := NewEqual("x", 10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := eq.Contains(key.Type(4))
 	spec.Expect(exists).ToEqual(false)
@@ -40,7 +40,7 @@ func TestEqualDoesNotContainAnIdWithAScoreGreaterThanOurtarget(t *testing.T) {
 
 func TestEqualDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
-	eq := NewEqual(10)
+	eq := NewEqual("x", 10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	_, exists := eq.Contains(key.Type(2))
 	spec.Expect(exists).ToEqual(false)
@@ -48,7 +48,7 @@ func TestEqualDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 
 func TestEqualContainsAnIdWithAScoreEqualOurTarget(t *testing.T) {
 	spec := gspec.New(t)
-	eq := NewEqual(10)
+	eq := NewEqual("x", 10)
 	eq.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
 	score, exists := eq.Contains(key.Type(3))
 	spec.Expect(score).ToEqual(10)
