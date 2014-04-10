@@ -137,7 +137,11 @@ func (d *Database) StringGet(id string) Document {
 
 // Inserts or updates the document
 func (d *Database) Update(doc Document) {
+	if doc == nil {
+		return
+	}
 	meta := newMeta(d, true)
+
 	doc.ReadMeta(meta)
 
 	id, stringId := meta.getId()
