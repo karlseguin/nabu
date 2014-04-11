@@ -41,7 +41,6 @@ func (c *Union) IndexNames() []string {
 func (c *Union) On(index indexes.Index) {
 	c.indexes[c.indexCount] = index
 	c.indexCount++
-println(index.Len())
 	if c.indexCount == len(c.values) {
 		sort.Sort(c.indexes)
 	}
