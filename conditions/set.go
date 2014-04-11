@@ -15,7 +15,7 @@ type Set struct {
 func NewSet(indexName string, value string) *Set {
 	return &Set{
 		value:     value,
-		indexName: indexName,
+		indexName: indexName + "=" + value,
 		key:       indexName + "=s=" + value,
 	}
 }

@@ -379,6 +379,16 @@ func TestQueryBySortLimitsTheTotalDesc(t *testing.T) {
 	spec.Expect(result.Total()).ToEqual(3)
 }
 
+func TestQueryWithSet(t *testing.T) {
+	db := New(SmallConfig().MaxTotal(3))
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+	makeSet(db, "city=caladan", 1, 2, 3)
+	makeSet(db, "city=dune", 2, 3, 4)
+	result := db.Query("created").NoCache().Set("city", "caladan").Execute()
+	assertResult(t, result, 1, 2, 3)
+}
+
 func TestQueryWithUnion(t *testing.T) {
 	db := New(SmallConfig().MaxTotal(3))
 	db.Close()

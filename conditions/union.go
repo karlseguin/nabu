@@ -9,19 +9,21 @@ import (
 
 type Union struct {
 	key        string
-	indexName  string
 	indexCount int
 	values     []string
 	indexes    indexes.Indexes
 }
 
 func NewUnion(indexName string, values []string) *Union {
-	return &Union{
+	u := &Union{
 		values:    values,
 		indexes:   make(indexes.Indexes, len(values)),
-		indexName: indexName,
 		key:       indexName + " in (" + strings.Join(values, ",") + ")",
 	}
+	for i, l := 0, len(values); i < l; i++ {
+		values[i] = indexName + "=" + values[i]
+	}
+	return u
 }
 
 func (c *Union) Key() string {
@@ -33,16 +35,13 @@ func (c *Union) IndexName() string {
 }
 
 func (c *Union) IndexNames() []string {
-	l := len(c.values)
-	for i := 0; i < l; i++ {
-		c.values[i] = c.indexName + "=" + c.values[i]
-	}
 	return c.values
 }
 
 func (c *Union) On(index indexes.Index) {
 	c.indexes[c.indexCount] = index
 	c.indexCount++
+println(index.Len())
 	if c.indexCount == len(c.values) {
 		sort.Sort(c.indexes)
 	}
