@@ -173,3 +173,14 @@ func makeIndex(db *Database, name string, ids ...int) indexes.Index {
 	}
 	return index
 }
+
+func makeSet(db *Database, name string, ids ...int) indexes.Index {
+	index := indexes.NewIndex(name, true, true)
+	for score, id := range ids {
+		index.SetInt(key.Type(id), score)
+	}
+	if db != nil {
+		addIndex(db, index)
+	}
+	return index
+}

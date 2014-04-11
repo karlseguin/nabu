@@ -46,8 +46,7 @@ func TestQueryWithNoIndexes(t *testing.T) {
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 1, 2, 3, 4, 5, 6, 7)
+	assertResult(t, result, 1, 2, 3, 4, 5, 6, 7)
 }
 
 func TestQueryWithNoIndexesDescending(t *testing.T) {
@@ -55,8 +54,7 @@ func TestQueryWithNoIndexesDescending(t *testing.T) {
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Desc().Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 7, 6, 5, 4, 3, 2, 1)
+	assertResult(t, result, 7, 6, 5, 4, 3, 2, 1)
 }
 
 func TestQueryWithNoIndexesDescendingWithFilter(t *testing.T) {
@@ -64,8 +62,7 @@ func TestQueryWithNoIndexesDescendingWithFilter(t *testing.T) {
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Where(GT("created", 4)).Desc().Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 7, 6, 5)
+	assertResult(t, result, 7, 6, 5)
 }
 
 func TestQueryWithNoIndexWithOffset(t *testing.T) {
@@ -73,8 +70,7 @@ func TestQueryWithNoIndexWithOffset(t *testing.T) {
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Offset(2).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 3, 4, 5, 6, 7)
+	assertResult(t, result, 3, 4, 5, 6, 7)
 }
 
 func TestQueryWithNoIndexesUsingDescendingWithOffset(t *testing.T) {
@@ -82,8 +78,7 @@ func TestQueryWithNoIndexesUsingDescendingWithOffset(t *testing.T) {
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Desc().Offset(3).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 4, 3, 2, 1)
+	assertResult(t, result, 4, 3, 2, 1)
 }
 
 func TestQueryWithNoIndexesProperlyCalculatesThatItHasNoMore(t *testing.T) {
@@ -187,8 +182,7 @@ func TestQueryWithNoIndexesWithFilter(t *testing.T) {
 	db.Close()
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
 	result := db.Query("created").Where(GT("created", 4)).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 5, 6, 7)
+	assertResult(t, result, 5, 6, 7)
 }
 
 func TestQueryWithNoIndexesLimitsTheTotalCountDesc(t *testing.T) {
@@ -208,8 +202,7 @@ func TestQueryWithASingleIndexBySort(t *testing.T) {
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 	makeIndex(db, "a", 2, 3, 6, 8, 100)
 	result := db.Query("created").NoCache().Where(GT("a", 1)).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 2, 3, 6, 8)
+	assertResult(t, result, 2, 3, 6, 8)
 }
 
 func TestQueryWithASingleIndexByFilteredSort(t *testing.T) {
@@ -218,8 +211,7 @@ func TestQueryWithASingleIndexByFilteredSort(t *testing.T) {
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 	makeIndex(db, "a", 2, 3, 6, 8, 100)
 	result := db.Query("created").NoCache().Where(LT("created", 8)).Where(GT("a", 1)).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 2, 3, 6)
+	assertResult(t, result, 2, 3, 6)
 }
 
 func TestQueryWithTwoIndexesBySort(t *testing.T) {
@@ -229,8 +221,7 @@ func TestQueryWithTwoIndexesBySort(t *testing.T) {
 	makeIndex(db, "a", 2, 3, 6, 8, 7, 11, 100)
 	makeIndex(db, "b", 1, 3, 5, 8, 11, 10, 100)
 	result := db.Query("created").NoCache().Where(GT("a", 1)).Where(GT("b", 2)).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 3, 8, 11)
+	assertResult(t, result, 3, 8, 11)
 }
 
 func TestQueryBySortDescending(t *testing.T) {
@@ -240,8 +231,7 @@ func TestQueryBySortDescending(t *testing.T) {
 	makeIndex(db, "a", 2, 3, 6, 8, 7, 11, 100)
 	makeIndex(db, "b", 1, 3, 5, 8, 11, 10, 100)
 	result := db.Query("created").NoCache().Where(GT("a", 1)).Where(GT("b", 3)).Desc().Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 11, 8)
+	assertResult(t, result, 11, 8)
 }
 
 func TestQuerWithFilterHavingFilteredSortDesc(t *testing.T) {
@@ -250,8 +240,7 @@ func TestQuerWithFilterHavingFilteredSortDesc(t *testing.T) {
 	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 	makeIndex(db, "a", 2, 3, 6, 8, 100)
 	result := db.Query("created").NoCache().Where(GT("created", 2)).Where(GT("a", 1)).Desc().Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 8, 6, 3)
+	assertResult(t, result, 8, 6, 3)
 }
 
 func TestQueryWithTwoIndexesBySortWithOffset(t *testing.T) {
@@ -261,8 +250,7 @@ func TestQueryWithTwoIndexesBySortWithOffset(t *testing.T) {
 	makeIndex(db, "a", 2, 3, 6, 8, 7, 11, 100)
 	makeIndex(db, "b", 1, 3, 5, 8, 11, 10, 100)
 	result := db.Query("created").NoCache().Where(GT("a", 1)).Where(GT("b", 2)).Offset(1).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 8, 11)
+	assertResult(t, result, 8, 11)
 }
 
 func TestQueryBySortDescendingWithOffset(t *testing.T) {
@@ -272,8 +260,7 @@ func TestQueryBySortDescendingWithOffset(t *testing.T) {
 	makeIndex(db, "a", 2, 3, 6, 8, 7, 11, 100)
 	makeIndex(db, "b", 1, 3, 5, 8, 11, 10, 100)
 	result := db.Query("created").NoCache().Where(GT("a", 1)).Where(GT("b", 0)).Desc().Offset(1).Execute()
-	defer result.Close()
-	assertResult(t, result.Ids(), 8, 3)
+	assertResult(t, result, 8, 3)
 }
 
 func TestQueryBySortProperlyCalculatesThatItHasNoMore(t *testing.T) {
@@ -392,7 +379,18 @@ func TestQueryBySortLimitsTheTotalDesc(t *testing.T) {
 	spec.Expect(result.Total()).ToEqual(3)
 }
 
-func assertResult(t *testing.T, actual []uint, expected ...uint) {
+func TestQueryWithUnion(t *testing.T) {
+	db := New(SmallConfig().MaxTotal(3))
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+	makeSet(db, "city=caladan", 1, 2, 3)
+	makeSet(db, "city=dune", 2, 3, 4)
+	result := db.Query("created").NoCache().Union("city", "caladan", "dune").Execute()
+	assertResult(t, result, 1, 2, 3, 4)
+}
+
+func assertResult(t *testing.T, result Result, expected ...uint) {
+	actual := result.Ids()
 	if len(actual) != len(expected) {
 		t.Errorf("expected %d results, got %d", len(expected), len(actual))
 	}

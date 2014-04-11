@@ -29,7 +29,15 @@ func (c *Union) Key() string {
 }
 
 func (c *Union) IndexName() string {
-	return c.indexName
+	return ""
+}
+
+func (c *Union) IndexNames() []string {
+	l := len(c.values)
+	for i := 0; i < l; i++ {
+		c.values[i] = c.indexName + "=" + c.values[i]
+	}
+	return c.values
 }
 
 func (c *Union) On(index indexes.Index) {

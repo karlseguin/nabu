@@ -24,6 +24,11 @@ type Condition interface {
 	RUnlock()
 }
 
+type MultiCondition interface {
+	Condition
+	IndexNames() []string
+}
+
 // An array of condition
 type Conditions []Condition
 

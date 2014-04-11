@@ -337,11 +337,21 @@ func (d *Database) LoadIndexes(conditions Conditions) {
 	d.indexLock.RLock()
 	defer d.indexLock.RUnlock()
 	for _, condition := range conditions {
-		if index, exists := d.indexes[condition.IndexName()]; exists {
-			condition.On(index)
+		if multi, ok := condition.(MultiCondition); ok {
+			for _, indexName := range multi.IndexNames() {
+				d.associateIndexWithCondition(condition, indexName)
+			}
 		} else {
-			condition.On(EmptyIndex)
+			d.associateIndexWithCondition(condition, condition.IndexName())
 		}
+	}
+}
+
+func (d *Database) associateIndexWithCondition(condition Condition, indexName string) {
+	if index, exists := d.indexes[indexName]; exists {
+		condition.On(index)
+	} else {
+		condition.On(EmptyIndex)
 	}
 }
 
