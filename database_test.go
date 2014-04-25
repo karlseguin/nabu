@@ -100,6 +100,31 @@ func TestRemovesADocumentByStringId(t *testing.T) {
 	spec.Expect(db.indexes["age"].Contains(1)).ToEqual(0)
 }
 
+func TestBulkLoadsANewSortedSet(t *testing.T) {
+	spec := gspec.New(t)
+	db := SmallDB()
+	defer db.Close()
+	db.BulkLoadSortedSet("new", []string{"c", "d", "a"})
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("c", false))).ToEqual(0)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("d", false))).ToEqual(1)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("a", false))).ToEqual(2)
+	_, exists := db.indexes["new"].Contains(db.idMap.get("e", false))
+	spec.Expect(exists).ToEqual(false)
+}
+
+func TestBulkLoadsAnExistingSortedSet(t *testing.T) {
+	spec := gspec.New(t)
+	db := SmallDB()
+	defer db.Close()
+	db.BulkLoadSortedSet("new", []string{"c", "d", "a"})
+	db.BulkLoadSortedSet("new", []string{"e", "a", "f"})
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("e", false))).ToEqual(0)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("a", false))).ToEqual(1)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("f", false))).ToEqual(2)
+	_, exists := db.indexes["new"].Contains(db.idMap.get("c", false))
+	spec.Expect(exists).ToEqual(false)
+}
+
 type Doc struct {
 	id      uint
 	indexes map[string]int

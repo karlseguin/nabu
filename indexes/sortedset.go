@@ -39,6 +39,22 @@ func (s *SortedSet) Len() int {
 	return len(s.lookup)
 }
 
+func (s *SortedSet) BulkLoad(ids []key.Type) {
+	list := make([]*SortedItem, len(ids)+2)
+	lookup := make(map[key.Type]*SortedItem, len(ids))
+	list[0] = NullSortedItem
+	list[len(list)-1] = NullSortedItem
+	for index, id := range ids {
+		item := &SortedItem{id: id, score: "", rank: int64(index)}
+		list[index+1] = item
+		lookup[id] = item
+	}
+	s.lock.Lock()
+	s.list = list
+	s.lookup = lookup
+	s.lock.Unlock()
+}
+
 func (s *SortedSet) SetInt(id key.Type, score int) {
 	panic("Cannot call SetInt on sortedset")
 }

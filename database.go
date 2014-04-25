@@ -246,6 +246,18 @@ func (d *Database) Close() error {
 	return merr
 }
 
+func (d *Database) BulkLoadSortedSet(name string, ids []string) {
+	index, ok := d.getOrCreateIndex(name, false, true).(*indexes.SortedSet)
+	if ok == false {
+		log.Println(name + " could not be bulk loaded")
+	}
+	keys := make([]key.Type, len(ids))
+	for index, id := range ids {
+		keys[index] = d.idMap.get(id, true)
+	}
+	index.BulkLoad(keys)
+}
+
 // Removes to the document by id. Safe to call even if the
 // id doesn't exist
 func (d *Database) removeByTypedId(id key.Type) {

@@ -6,13 +6,28 @@ import (
 	"testing"
 )
 
+func TestSortedSetBulkLoad(t *testing.T) {
+	spec := gspec.New(t)
+	s := newSortedSet("test")
+	sortedSetLoad(s, 1, "banana", 2, "apples", 3, "oranges")
+	s.BulkLoad([]key.Type{key.Type(5), key.Type(10), key.Type(2)})
+	spec.Expect(s.list[0].id).ToEqual(key.NULL)
+	spec.Expect(s.list[1].id).ToEqual(key.Type(5))
+	spec.Expect(s.list[2].id).ToEqual(key.Type(10))
+	spec.Expect(s.list[3].id).ToEqual(key.Type(2))
+	spec.Expect(s.list[4].id).ToEqual(key.NULL)
+	spec.Expect(s.Len()).ToEqual(3)
+}
+
 func TestSortedSetOrderOnInsert(t *testing.T) {
 	spec := gspec.New(t)
 	s := newSortedSet("test")
 	sortedSetLoad(s, 1, "banana", 2, "apples", 3, "oranges")
+	spec.Expect(s.list[0].id).ToEqual(key.NULL)
 	spec.Expect(s.list[1].id).ToEqual(key.Type(2))
 	spec.Expect(s.list[2].id).ToEqual(key.Type(1))
 	spec.Expect(s.list[3].id).ToEqual(key.Type(3))
+	spec.Expect(s.list[4].id).ToEqual(key.NULL)
 	spec.Expect(s.Len()).ToEqual(3)
 }
 
