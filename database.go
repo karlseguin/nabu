@@ -423,31 +423,31 @@ func (db *Database) safeDelete(indexName string, id key.Type) {
 	}
 }
 
-func (db *Database) getOrCreateSortedIntIndex(indexName string) indexes.WithIntScores  {
-	return db.getOrCreateIndex(indexName, func() indexes.Index{
+func (db *Database) getOrCreateSortedIntIndex(indexName string) indexes.WithIntScores {
+	return db.getOrCreateIndex(indexName, func() indexes.Index {
 		return indexes.NewSortedInts(indexName)
 	}).(indexes.WithIntScores)
 }
 
-func (db *Database) getOrCreateSortedStringIndex(indexName string) indexes.WithStringScores  {
-	return db.getOrCreateIndex(indexName, func() indexes.Index{
+func (db *Database) getOrCreateSortedStringIndex(indexName string) indexes.WithStringScores {
+	return db.getOrCreateIndex(indexName, func() indexes.Index {
 		return indexes.NewSortedStrings(indexName)
 	}).(indexes.WithStringScores)
 }
 
-func (db *Database) getOrCreateSetStringIndex(indexName string) indexes.Index  {
-	return db.getOrCreateIndex(indexName, func() indexes.Index{
+func (db *Database) getOrCreateSetStringIndex(indexName string) indexes.Index {
+	return db.getOrCreateIndex(indexName, func() indexes.Index {
 		return indexes.NewSetString(indexName)
 	})
 }
 
-func (db *Database) getOrCreateBigSetStringIndex(indexName string) indexes.Index  {
-	return db.getOrCreateIndex(indexName, func() indexes.Index{
+func (db *Database) getOrCreateBigSetStringIndex(indexName string) indexes.Index {
+	return db.getOrCreateIndex(indexName, func() indexes.Index {
 		return indexes.NewSetString(indexName)
 	})
 }
 
-func (db *Database) getOrCreateIndex(indexName string, factory func() indexes.Index) indexes.Index  {
+func (db *Database) getOrCreateIndex(indexName string, factory func() indexes.Index) indexes.Index {
 	if index, exists := db.getIndex(indexName); exists {
 		return index
 	}

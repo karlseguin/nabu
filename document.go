@@ -26,10 +26,10 @@ type Meta struct {
 	IsUpdate bool
 	t        string
 
-	sortedInts     map[string]int
-	sortedStrings  map[string]string
-	setStrings     map[string]struct{}
-	bigSetStrings  map[string]struct{}
+	sortedInts    map[string]int
+	sortedStrings map[string]string
+	setStrings    map[string]struct{}
+	bigSetStrings map[string]struct{}
 }
 
 func newMeta(database *Database, isUpdate bool) *Meta {
@@ -38,8 +38,8 @@ func newMeta(database *Database, isUpdate bool) *Meta {
 		sortedStrings: make(map[string]string),
 		setStrings:    make(map[string]struct{}),
 		bigSetStrings: make(map[string]struct{}),
-		database: database,
-		IsUpdate: isUpdate,
+		database:      database,
+		IsUpdate:      isUpdate,
 	}
 }
 

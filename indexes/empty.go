@@ -7,6 +7,7 @@ import (
 var (
 	emptyIterator = new(EmptyIterator)
 )
+
 // an empty index
 type Empty struct {
 	name string
@@ -30,7 +31,7 @@ func (e *Empty) Remove(id key.Type) {
 // Get the number of documents indexed
 // Assumes the set is already read-locked
 func (e *Empty) Len() int {
-	return	 0
+	return 0
 }
 
 func (e *Empty) Contains(id key.Type) bool {
@@ -59,8 +60,7 @@ func (e *Empty) Backwards() Iterator {
 	return emptyIterator
 }
 
-type EmptyIterator  struct {
-
+type EmptyIterator struct {
 }
 
 func (i *EmptyIterator) Next() key.Type {

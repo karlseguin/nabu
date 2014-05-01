@@ -16,7 +16,7 @@ type SetString struct {
 
 func NewSetString(name string) *SetString {
 	return &SetString{
-		ids: []key.Type{key.NULL, key.NULL},
+		ids:    []key.Type{key.NULL, key.NULL},
 		name:   name,
 		lookup: make(map[key.Type]struct{}),
 	}
@@ -80,7 +80,7 @@ func (s *SetString) addId(id key.Type) {
 
 	s.lock.RLock()
 	l := len(s.ids)
-	ids := make([]key.Type, l + 1)
+	ids := make([]key.Type, l+1)
 	copy(ids, s.ids)
 	s.lock.RUnlock()
 

@@ -2,8 +2,8 @@ package conditions
 
 import (
 	"github.com/karlseguin/gspec"
-	"github.com/karlseguin/nabu/key"
 	"github.com/karlseguin/nabu/indexes"
+	"github.com/karlseguin/nabu/key"
 	"testing"
 )
 

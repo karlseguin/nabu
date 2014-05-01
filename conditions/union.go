@@ -16,9 +16,9 @@ type Union struct {
 
 func NewUnion(indexName string, values []string) *Union {
 	u := &Union{
-		values:    values,
-		indexes:   make(indexes.Indexes, len(values)),
-		key:       indexName + " in (" + strings.Join(values, ",") + ")",
+		values:  values,
+		indexes: make(indexes.Indexes, len(values)),
+		key:     indexName + " in (" + strings.Join(values, ",") + ")",
 	}
 	for i, l := 0, len(values); i < l; i++ {
 		values[i] = indexName + "=" + values[i]

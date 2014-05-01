@@ -119,8 +119,8 @@ func (s *SortedStrings) remove(item *SortedItem) {
 }
 
 func (s *SortedStrings) Contains(id key.Type) bool {
-		_, exists := s.lookup[id]
-		return exists
+	_, exists := s.lookup[id]
+	return exists
 }
 
 func (s *SortedStrings) Score(id key.Type) (int, bool) {
