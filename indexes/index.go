@@ -8,19 +8,44 @@ import (
 const MAX = 9223372036854775807
 const MIN = -9223372036854775807
 
+// SetInt(id key.Type, score int)
+// SetString(id key.Type, score string)
+
 type Index interface {
 	Name() string
 	Len() int
-	SetInt(id key.Type, score int)
-	SetString(id key.Type, score string)
+	Set(id key.Type)
 	Remove(id key.Type)
-	Contains(id key.Type) (int, bool)
-	GetRank(score int, first bool) int
+	Contains(id key.Type) bool
 	RLock()
 	RUnlock()
+}
 
+type Iterable interface {
+	Index
+	Iterates
+}
+
+type Ranked interface {
+	Index
+	Iterates
+	Score(id key.Type) (int, bool)
+	GetRank(score int, first bool) int
+}
+
+type Iterates interface {
 	Forwards() Iterator
 	Backwards() Iterator
+}
+
+type WithIntScores interface {
+	Index
+	SetInt(id key.Type, score int)
+}
+
+type WithStringScores interface {
+	Index
+	SetString(id key.Type, score string)
 }
 
 // Interface used to iterate over a sorted index.
@@ -34,22 +59,6 @@ type Iterator interface {
 	Offset(offset int) Iterator
 	Range(from, to int) Iterator
 	Close()
-}
-
-// Creates the index
-func NewIndex(name string, set bool, isString bool) Index {
-	if set {
-		return newSet(name)
-	}
-	if isString {
-		return newSortedSet(name)
-	}
-	return newSkiplist(name)
-}
-
-// Creates the index
-func LoadIndex(name string, values map[key.Type]int) Index {
-	return loadSkiplist(name, values)
 }
 
 // An array of indexes

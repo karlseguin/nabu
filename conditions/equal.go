@@ -11,7 +11,7 @@ type Equal struct {
 	indexName string
 	length    int
 	value     int
-	index     indexes.Index
+	index     indexes.Ranked
 }
 
 func NewEqual(indexName string, value int) *Equal {
@@ -32,7 +32,7 @@ func (c *Equal) IndexName() string {
 }
 
 func (c *Equal) On(index indexes.Index) {
-	c.index = index
+	c.index = index.(indexes.Ranked)
 }
 
 func (c *Equal) Range() (int, int) {
@@ -47,8 +47,13 @@ func (c *Equal) Len() int {
 	return c.length
 }
 
-func (c *Equal) Contains(id key.Type) (int, bool) {
-	if score, exists := c.index.Contains(id); exists && score == c.value {
+func (c *Equal) Contains(id key.Type) bool {
+	_, exists := c.Score(id)
+	return exists
+}
+
+func (c *Equal) Score(id key.Type) (int, bool) {
+	if score, exists := c.index.Score(id); exists && score == c.value {
 		return score, true
 	}
 	return 0, false

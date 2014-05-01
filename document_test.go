@@ -12,10 +12,10 @@ func TestMetaCanBeSet(t *testing.T) {
 	spec.Expect(meta.IsUpdate).ToEqual(true)
 	meta.IntId(33)
 
-	meta.IndexInt("age", 22)
-	meta.IndexInt("power", 9001)
+	meta.SortedInt("age", 22)
+	meta.SortedInt("power", 9001)
 	spec.Expect(meta.getId()).ToEqual(key.Type(33))
-	spec.Expect(len(meta.iIndexes)).ToEqual(2)
+	spec.Expect(len(meta.sortedInts)).ToEqual(2)
 }
 
 func TestMetaCanBeSetWithStringId(t *testing.T) {

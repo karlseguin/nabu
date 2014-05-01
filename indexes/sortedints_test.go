@@ -7,74 +7,74 @@ import (
 	"testing"
 )
 
-func TestSkiplistLength(t *testing.T) {
+func TestSortedIntsLength(t *testing.T) {
 	spec := gspec.New(t)
-	s := newSkiplist("test")
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	spec.Expect(s.Len()).ToEqual(3)
 }
 
-func TestSkiplistForwardIteration(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsForwardIteration(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Forwards().Offset(0), 1, 2, 3)
 }
 
-func TestSkiplistBackwardIteration(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsBackwardIteration(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Backwards().Offset(0), 3, 2, 1)
 }
 
-func TestSkiplistForwardIterationWithOffset(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsForwardIterationWithOffset(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Forwards().Offset(1), 2, 3)
 }
 
-func TestSkiplistBackwardIterationWithOffset(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsBackwardIterationWithOffset(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Backwards().Offset(1), 2, 1)
 }
 
-func TestSkiplistForwardIterationWithOffsetAtRange(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsForwardIterationWithOffsetAtRange(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Forwards().Offset(3), key.NULL)
 }
 
-func TestSkiplistBackwardIterationWithOffsetAtRange(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsBackwardIterationWithOffsetAtRange(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Backwards().Offset(3), key.NULL)
 }
 
-func TestSkiplistForwardIterationWithOffsetOutsideOfRange(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsForwardIterationWithOffsetOutsideOfRange(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Forwards().Offset(4), key.NULL)
 }
 
-func TestSkiplistBackwardIterationWithOffsetOutsideOfRange(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsBackwardIterationWithOffsetOutsideOfRange(t *testing.T) {
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
 	assertIterator(t, s.Backwards().Offset(4), key.NULL)
 }
 
-func TestSkiplistForwardIterationWithRange(t *testing.T) {
+func TestSortedIntsForwardIterationWithRange(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.Load([]key.Type{1, 2, 3, 4, 5, 6})
 		assertIterator(t, s.Forwards().Range(1, 3).Offset(0), 2, 3, 4)
 	}
 }
 
-func TestSkiplistForwardIterationMovesUpToNextClosest(t *testing.T) {
+func TestSortedIntsForwardIterationMovesUpToNextClosest(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.SetInt(key.Type(1), 1)
 		s.SetInt(key.Type(3), 3)
 		s.SetInt(key.Type(4), 4)
@@ -83,55 +83,55 @@ func TestSkiplistForwardIterationMovesUpToNextClosest(t *testing.T) {
 	}
 }
 
-func TestSkiplistForwardIterationWithOffsetAndRange(t *testing.T) {
+func TestSortedIntsForwardIterationWithOffsetAndRange(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.Load([]key.Type{1, 2, 3, 4, 5, 6})
 		assertIterator(t, s.Forwards().Range(1, 3).Offset(1), 3, 4)
 	}
 }
 
-func TestSkiplistForwardIterationWithRangeOutsideBounds(t *testing.T) {
+func TestSortedIntsForwardIterationWithRangeOutsideBounds(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.Load([]key.Type{1, 2, 3})
 		assertIterator(t, s.Forwards().Range(-10, 10).Offset(1), 2, 3)
 	}
 }
 
-func TestSkiplistBackwardIterationWithRange(t *testing.T) {
+func TestSortedIntsBackwardIterationWithRange(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.Load([]key.Type{1, 2, 3, 4, 5, 6})
 		assertIterator(t, s.Backwards().Range(1, 3).Offset(0), 4, 3, 2)
 	}
 }
 
-func TestSkiplistBackwardIterationWithOffsetAndRange(t *testing.T) {
+func TestSortedIntsBackwardIterationWithOffsetAndRange(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.Load([]key.Type{1, 2, 3, 4, 5, 6})
 		assertIterator(t, s.Backwards().Range(1, 3).Offset(1), 3, 2)
 	}
 }
 
-func TestSkiplistBackwardIterationWithRangeOutsideBounds(t *testing.T) {
+func TestSortedIntsBackwardIterationWithRangeOutsideBounds(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.Load([]key.Type{1, 2, 3})
 		assertIterator(t, s.Backwards().Range(-10, 10).Offset(1), 2, 1)
 	}
 }
 
-func TestSkiplistBackwardIterationMovesUpToPreviousClosest(t *testing.T) {
+func TestSortedIntsBackwardIterationMovesUpToPreviousClosest(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.SetInt(key.Type(1), 1)
 		s.SetInt(key.Type(3), 3)
 		s.SetInt(key.Type(4), 4)
@@ -140,37 +140,41 @@ func TestSkiplistBackwardIterationMovesUpToPreviousClosest(t *testing.T) {
 	}
 }
 
-func TestSkiplistRankingIfMemberDoesNotExist(t *testing.T) {
-	s := newSkiplist("test")
+func TestSortedIntsRankingIfMemberDoesNotExist(t *testing.T) {
+	spec := gspec.New(t)
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
-	_, exists := s.Contains(100)
-	gspec.New(t).Expect(exists).ToEqual(false)
+	_, exists := s.Score(100)
+	spec.Expect(exists).ToEqual(false)
+	spec.Expect(s.Contains(100)).ToEqual(false)
 }
 
-func TestSkiplistRankingIfMemberExist(t *testing.T) {
+func TestSortedIntsRankingIfMemberExist(t *testing.T) {
 	spec := gspec.New(t)
-	s := newSkiplist("test")
+	s := NewSortedInts("test")
 	s.Load([]key.Type{1, 2, 3})
-	rank, exists := s.Contains(3)
+	rank, exists := s.Score(3)
 	spec.Expect(exists).ToEqual(true)
 	spec.Expect(rank).ToEqual(2)
+	spec.Expect(s.Contains(3)).ToEqual(true)
 }
 
-func TestSkiplistReplace(t *testing.T) {
+func TestSortedIntsReplace(t *testing.T) {
 	spec := gspec.New(t)
-	s := newSkiplist("test")
+	s := NewSortedInts("test")
 	s.SetInt(1, 1)
 	s.SetInt(2, 2)
 	s.SetInt(1, 1)
 	assertIterator(t, s.Forwards().Offset(0), 1, 2)
-	spec.Expect(s.Contains(1)).ToEqual(1)
+	score, _ := s.Score(1)
+	spec.Expect(score).ToEqual(1)
 }
 
-func TestSkiplistSetAndRemoveItems(t *testing.T) {
+func TestSortedIntsSetAndRemoveItems(t *testing.T) {
 	spec := gspec.New(t)
 	for i := 0; i < 500; i++ {
 		rand.Seed(int64(i))
-		s := newSkiplist("test")
+		s := NewSortedInts("test")
 		s.SetInt(1, 1)
 		s.SetInt(2, 2)
 		s.SetInt(3, 3)

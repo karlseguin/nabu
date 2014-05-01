@@ -25,22 +25,20 @@ func TestSetDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
 	set := NewSet("x", "10")
 	set.On(makeSetIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := set.Contains(key.Type(22))
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(set.Contains(key.Type(22))).ToEqual(false)
 }
 
 func TestSetContainsAnExistingId(t *testing.T) {
 	spec := gspec.New(t)
 	set := NewSet("x", "10")
 	set.On(makeSetIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := set.Contains(key.Type(13))
-	spec.Expect(exists).ToEqual(true)
+	spec.Expect(set.Contains(key.Type(13))).ToEqual(true)
 }
 
 func makeSetIndex(ids ...int) indexes.Index {
-	set := indexes.NewIndex("test", true, false)
+	set := indexes.NewSetString("test")
 	for _, id := range ids {
-		set.SetInt(key.Type(id), 0)
+		set.Set(key.Type(id))
 	}
 	return set
 }

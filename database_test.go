@@ -36,8 +36,8 @@ func TestInsertANewDocument(t *testing.T) {
 	db.Update(NewDoc(1123, map[string]int{"trending": 1, "age": 3}))
 	doc := db.Get(1123).(*Doc)
 	spec.Expect(doc.id).ToEqual(uint(1123))
-	spec.Expect(db.indexes["trending"].Contains(1123)).ToEqual(1)
-	spec.Expect(db.indexes["age"].Contains(1123)).ToEqual(3)
+	spec.Expect(db.indexes["trending"].Contains(1123)).ToEqual(true)
+	spec.Expect(db.indexes["age"].Contains(1123)).ToEqual(true)
 }
 
 func TestInsertANewDocumentWithAStringId(t *testing.T) {
@@ -47,8 +47,8 @@ func TestInsertANewDocumentWithAStringId(t *testing.T) {
 	db.Update(NewStringDoc("XX", map[string]int{"trending": 1, "age": 3}))
 	doc := db.StringGet("XX").(*StringDoc)
 	spec.Expect(doc.id).ToEqual("XX")
-	spec.Expect(db.indexes["trending"].Contains(1)).ToEqual(1)
-	spec.Expect(db.indexes["age"].Contains(1)).ToEqual(3)
+	spec.Expect(db.indexes["trending"].Contains(1)).ToEqual(true)
+	spec.Expect(db.indexes["age"].Contains(1)).ToEqual(true)
 }
 
 func TestUpdatesADocument(t *testing.T) {
@@ -59,9 +59,9 @@ func TestUpdatesADocument(t *testing.T) {
 	db.Update(NewDoc(94, map[string]int{"trending": 10, "other": 5}))
 	doc := db.Get(94).(*Doc)
 	spec.Expect(doc.id).ToEqual(uint(94))
-	spec.Expect(db.indexes["trending"].Contains(94)).ToEqual(10)
-	spec.Expect(db.indexes["age"].Contains(94)).ToEqual(0)
-	spec.Expect(db.indexes["other"].Contains(94)).ToEqual(5)
+	spec.Expect(db.indexes["trending"].Contains(94)).ToEqual(true)
+	spec.Expect(db.indexes["age"].Contains(94)).ToEqual(false)
+	spec.Expect(db.indexes["other"].Contains(94)).ToEqual(true)
 }
 
 func TestRemovesADocument(t *testing.T) {
@@ -72,8 +72,8 @@ func TestRemovesADocument(t *testing.T) {
 	db.Update(doc)
 	db.Remove(doc)
 	spec.Expect(db.Get(94)).ToBeNil()
-	spec.Expect(db.indexes["trending"].Contains(94)).ToEqual(0)
-	spec.Expect(db.indexes["age"].Contains(94)).ToEqual(0)
+	spec.Expect(db.indexes["trending"].Contains(94)).ToEqual(false)
+	spec.Expect(db.indexes["age"].Contains(94)).ToEqual(false)
 }
 
 func TestRemovesADocumentById(t *testing.T) {
@@ -84,8 +84,8 @@ func TestRemovesADocumentById(t *testing.T) {
 	db.Update(doc)
 	db.RemoveById(87)
 	spec.Expect(db.Get(87)).ToBeNil()
-	spec.Expect(db.indexes["trending"].Contains(87)).ToEqual(0)
-	spec.Expect(db.indexes["age"].Contains(87)).ToEqual(0)
+	spec.Expect(db.indexes["trending"].Contains(87)).ToEqual(false)
+	spec.Expect(db.indexes["age"].Contains(87)).ToEqual(false)
 }
 
 func TestRemovesADocumentByStringId(t *testing.T) {
@@ -96,33 +96,31 @@ func TestRemovesADocumentByStringId(t *testing.T) {
 	db.Update(doc)
 	db.RemoveByStringId("111z")
 	spec.Expect(db.StringGet("111z")).ToBeNil()
-	spec.Expect(db.indexes["trending"].Contains(1)).ToEqual(0)
-	spec.Expect(db.indexes["age"].Contains(1)).ToEqual(0)
+	spec.Expect(db.indexes["trending"].Contains(1)).ToEqual(false)
+	spec.Expect(db.indexes["age"].Contains(1)).ToEqual(false)
 }
 
 func TestBulkLoadsANewSortedSet(t *testing.T) {
 	spec := gspec.New(t)
 	db := SmallDB()
 	defer db.Close()
-	db.BulkLoadSortedSet("new", []string{"c", "d", "a"})
-	spec.Expect(db.indexes["new"].Contains(db.idMap.get("c", false))).ToEqual(0)
-	spec.Expect(db.indexes["new"].Contains(db.idMap.get("d", false))).ToEqual(1)
-	spec.Expect(db.indexes["new"].Contains(db.idMap.get("a", false))).ToEqual(2)
-	_, exists := db.indexes["new"].Contains(db.idMap.get("e", false))
-	spec.Expect(exists).ToEqual(false)
+	db.BulkLoadSortedString("new", []string{"c", "d", "a"})
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("c", false))).ToEqual(true)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("d", false))).ToEqual(true)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("a", false))).ToEqual(true)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("e", false))).ToEqual(false)
 }
 
 func TestBulkLoadsAnExistingSortedSet(t *testing.T) {
 	spec := gspec.New(t)
 	db := SmallDB()
 	defer db.Close()
-	db.BulkLoadSortedSet("new", []string{"c", "d", "a"})
-	db.BulkLoadSortedSet("new", []string{"e", "a", "f"})
-	spec.Expect(db.indexes["new"].Contains(db.idMap.get("e", false))).ToEqual(0)
-	spec.Expect(db.indexes["new"].Contains(db.idMap.get("a", false))).ToEqual(1)
-	spec.Expect(db.indexes["new"].Contains(db.idMap.get("f", false))).ToEqual(2)
-	_, exists := db.indexes["new"].Contains(db.idMap.get("c", false))
-	spec.Expect(exists).ToEqual(false)
+	db.BulkLoadSortedString("new", []string{"c", "d", "a"})
+	db.BulkLoadSortedString("new", []string{"e", "a", "f"})
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("e", false))).ToEqual(true)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("a", false))).ToEqual(true)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("f", false))).ToEqual(true)
+	spec.Expect(db.indexes["new"].Contains(db.idMap.get("c", false))).ToEqual(false)
 }
 
 type Doc struct {
@@ -140,7 +138,7 @@ func NewDoc(id uint, indexes map[string]int) *Doc {
 func (d *Doc) ReadMeta(meta *Meta) {
 	meta.IntId(d.id)
 	for name, score := range d.indexes {
-		meta.IndexInt(name, score)
+		meta.SortedInt(name, score)
 	}
 }
 
@@ -163,7 +161,7 @@ func NewStringDoc(id string, indexes map[string]int) *StringDoc {
 func (d *StringDoc) ReadMeta(meta *Meta) {
 	meta.StringId(d.id)
 	for name, score := range d.indexes {
-		meta.IndexInt(name, score)
+		meta.SortedInt(name, score)
 	}
 }
 
@@ -175,7 +173,7 @@ func SmallDB() *Database {
 	db := New(SmallConfig())
 	defer db.Close()
 	makeIndex(db, "created", 0)
-	addIndex(db, indexes.NewIndex("age", false, false))
+	addIndex(db, indexes.NewSortedInts("age"))
 	return db
 }
 
@@ -188,11 +186,10 @@ func addIndex(db *Database, index indexes.Index) {
 }
 
 func makeIndex(db *Database, name string, ids ...int) indexes.Index {
-	m := make(map[key.Type]int, len(ids))
+	index := indexes.NewSortedInts(name)
 	for _, id := range ids {
-		m[key.Type(id)] = id
+		index.SetInt(key.Type(id), id)
 	}
-	index := indexes.LoadIndex(name, m)
 	if db != nil {
 		addIndex(db, index)
 	}
@@ -200,9 +197,9 @@ func makeIndex(db *Database, name string, ids ...int) indexes.Index {
 }
 
 func makeSet(db *Database, name string, ids ...int) indexes.Index {
-	index := indexes.NewIndex(name, true, true)
-	for score, id := range ids {
-		index.SetInt(key.Type(id), score)
+	index := indexes.NewSetString(name)
+	for _, id := range ids {
+		index.Set(key.Type(id))
 	}
 	if db != nil {
 		addIndex(db, index)

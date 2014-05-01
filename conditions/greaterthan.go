@@ -11,7 +11,7 @@ type GreaterThan struct {
 	indexName string
 	length    int
 	value     int
-	index     indexes.Index
+	index     indexes.Ranked
 }
 
 func NewGreaterThan(indexName string, value int) *GreaterThan {
@@ -32,7 +32,7 @@ func (c *GreaterThan) IndexName() string {
 }
 
 func (c *GreaterThan) On(index indexes.Index) {
-	c.index = index
+	c.index = index.(indexes.Ranked)
 }
 
 func (c *GreaterThan) Range() (int, int) {
@@ -46,8 +46,13 @@ func (c *GreaterThan) Len() int {
 	return c.length
 }
 
-func (c *GreaterThan) Contains(id key.Type) (int, bool) {
-	if score, exists := c.index.Contains(id); exists && score > c.value {
+func (c *GreaterThan) Contains(id key.Type) bool {
+	_, exists := c.Score(id)
+	return exists
+}
+
+func (c *GreaterThan) Score(id key.Type) (int, bool) {
+	if score, exists := c.index.Score(id); exists && score > c.value {
 		return score, true
 	}
 	return 0, false

@@ -46,7 +46,7 @@ allows you to infer the type based on the id).
 type IntFactory func(id uint, t string, data []byte) Document
 type StringFactory func(stringId string, id uint, t string, data []byte) Document
 
-var EmptyIndex = indexes.NewIndex("_empty_", true, false)
+var EmptyIndex = indexes.NewEmpty("<__></__>db_empty")
 
 // Database is the primary point of interaction with Nabu
 type Database struct {
@@ -111,7 +111,7 @@ func New(c *Configuration) *Database {
 // Generate a Query object against the specified sort index
 func (d *Database) Query(indexName string) Query {
 	d.indexLock.RLock()
-	index, exists := d.indexes[indexName]
+	index, exists := d.indexes[indexName].(indexes.Ranked)
 	d.indexLock.RUnlock()
 	if exists == false {
 		return emptyQuery
@@ -155,27 +155,36 @@ func (d *Database) Update(doc Document) {
 	if isUpdate {
 		old.ReadMeta(oldMeta)
 	}
-	for name, score := range meta.iIndexes {
-		delete(oldMeta.iIndexes, name)
-		_, isSet := meta.sets[name]
-		index := d.getOrCreateIndex(name, isSet, false)
-		index.SetInt(id, score)
+	for name, score := range meta.sortedInts {
+		delete(oldMeta.sortedInts, name)
+		d.getOrCreateSortedIntIndex(name).SetInt(id, score)
 	}
-	for name, _ := range oldMeta.iIndexes {
-		if index, exists := d.getIndex(name); exists {
-			index.Remove(id)
-		}
+	for name, _ := range oldMeta.sortedInts {
+		d.safeDelete(name, id)
 	}
 
-	for name, score := range meta.sIndexes {
-		delete(oldMeta.sIndexes, name)
-		index := d.getOrCreateIndex(name, false, true)
-		index.SetString(id, score)
+	for name, score := range meta.sortedStrings {
+		delete(oldMeta.sortedStrings, name)
+		d.getOrCreateSortedStringIndex(name).SetString(id, score)
 	}
-	for name, _ := range oldMeta.sIndexes {
-		if index, exists := d.getIndex(name); exists {
-			index.Remove(id)
-		}
+	for name, _ := range oldMeta.sortedStrings {
+		d.safeDelete(name, id)
+	}
+
+	for name, _ := range meta.setStrings {
+		delete(oldMeta.setStrings, name)
+		d.getOrCreateSetStringIndex(name).Set(id)
+	}
+	for name, _ := range oldMeta.setStrings {
+		d.safeDelete(name, id)
+	}
+
+	for name, _ := range meta.bigSetStrings {
+		delete(oldMeta.bigSetStrings, name)
+		d.getOrCreateBigSetStringIndex(name).Set(id)
+	}
+	for name, _ := range oldMeta.bigSetStrings {
+		d.safeDelete(name, id)
 	}
 
 	if d.loading == false && d.persist {
@@ -194,17 +203,18 @@ func (d *Database) Remove(doc Document) {
 	meta := newMeta(d, false)
 	doc.ReadMeta(meta)
 	id, stringId := meta.getId()
-	for name, _ := range meta.iIndexes {
-		if index, exists := d.getIndex(name); exists {
-			index.Remove(id)
-		}
+	for name, _ := range meta.sortedInts {
+		d.safeDelete(name, id)
 	}
-	for name, _ := range meta.sIndexes {
-		if index, exists := d.getIndex(name); exists {
-			index.Remove(id)
-		}
+	for name, _ := range meta.sortedStrings {
+		d.safeDelete(name, id)
 	}
-
+	for name, _ := range meta.setStrings {
+		d.safeDelete(name, id)
+	}
+	for name, _ := range meta.bigSetStrings {
+		d.safeDelete(name, id)
+	}
 	bucket := d.getBucket(id)
 	bucket.Lock()
 	delete(bucket.lookup, id)
@@ -246,8 +256,8 @@ func (d *Database) Close() error {
 	return merr
 }
 
-func (d *Database) BulkLoadSortedSet(name string, ids []string) {
-	index, ok := d.getOrCreateIndex(name, false, true).(*indexes.SortedSet)
+func (d *Database) BulkLoadSortedString(name string, ids []string) {
+	index, ok := d.getOrCreateSortedStringIndex(name).(*indexes.SortedStrings)
 	if ok == false {
 		log.Println(name + " could not be bulk loaded")
 	}
@@ -278,23 +288,6 @@ func (d *Database) get(id key.Type) Document {
 // Gets the document's bucket
 func (d *Database) getBucket(key key.Type) *Bucket {
 	return d.buckets[key.Bucket(d.bucketCount)]
-}
-
-// Gets the sort index, or creates it if it doesn't already exists
-func (d *Database) getOrCreateIndex(name string, isSet bool, isString bool) indexes.Index {
-	index, exists := d.getIndex(name)
-	if exists {
-		return index
-	}
-
-	d.indexLock.Lock()
-	defer d.indexLock.Unlock()
-	index, exists = d.indexes[name]
-	if exists == false {
-		index = indexes.NewIndex(name, isSet, isString)
-		d.indexes[name] = index
-	}
-	return index
 }
 
 func (d *Database) getIndex(name string) (indexes.Index, bool) {
@@ -422,6 +415,50 @@ func removeValue(values []string, target string) ([]string, bool) {
 		}
 	}
 	return values, false
+}
+
+func (db *Database) safeDelete(indexName string, id key.Type) {
+	if index, exists := db.getIndex(indexName); exists {
+		index.Remove(id)
+	}
+}
+
+func (db *Database) getOrCreateSortedIntIndex(indexName string) indexes.WithIntScores  {
+	return db.getOrCreateIndex(indexName, func() indexes.Index{
+		return indexes.NewSortedInts(indexName)
+	}).(indexes.WithIntScores)
+}
+
+func (db *Database) getOrCreateSortedStringIndex(indexName string) indexes.WithStringScores  {
+	return db.getOrCreateIndex(indexName, func() indexes.Index{
+		return indexes.NewSortedStrings(indexName)
+	}).(indexes.WithStringScores)
+}
+
+func (db *Database) getOrCreateSetStringIndex(indexName string) indexes.Index  {
+	return db.getOrCreateIndex(indexName, func() indexes.Index{
+		return indexes.NewSetString(indexName)
+	})
+}
+
+func (db *Database) getOrCreateBigSetStringIndex(indexName string) indexes.Index  {
+	return db.getOrCreateIndex(indexName, func() indexes.Index{
+		return indexes.NewSetString(indexName)
+	})
+}
+
+func (db *Database) getOrCreateIndex(indexName string, factory func() indexes.Index) indexes.Index  {
+	if index, exists := db.getIndex(indexName); exists {
+		return index
+	}
+	index := factory()
+	db.indexLock.Lock()
+	defer db.indexLock.Unlock()
+	if index, exists := db.indexes[indexName]; exists {
+		return index
+	}
+	db.indexes[indexName] = index
+	return index
 }
 
 type SerializedSort struct {

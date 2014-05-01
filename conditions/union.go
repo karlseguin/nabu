@@ -57,13 +57,13 @@ func (c *Union) Len() int {
 	return c.indexes[c.indexCount-1].Len()
 }
 
-func (c *Union) Contains(id key.Type) (int, bool) {
+func (c *Union) Contains(id key.Type) bool {
 	for _, index := range c.indexes {
-		if score, exists := index.Contains(id); exists {
-			return score, true
+		if index.Contains(id) {
+			return true
 		}
 	}
-	return 0, false
+	return false
 }
 
 func (c *Union) CanIterate() bool {

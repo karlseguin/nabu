@@ -11,7 +11,7 @@ type LessThan struct {
 	indexName string
 	value     int
 	length    int
-	index     indexes.Index
+	index     indexes.Ranked
 }
 
 func NewLessThan(indexName string, value int) *LessThan {
@@ -32,7 +32,7 @@ func (c *LessThan) IndexName() string {
 }
 
 func (c *LessThan) On(index indexes.Index) {
-	c.index = index
+	c.index = index.(indexes.Ranked)
 }
 
 func (c *LessThan) Range() (int, int) {
@@ -46,8 +46,13 @@ func (c *LessThan) Len() int {
 	return c.length
 }
 
-func (c *LessThan) Contains(id key.Type) (int, bool) {
-	if score, exists := c.index.Contains(id); exists && score < c.value {
+func (c *LessThan) Contains(id key.Type) bool {
+	_, exists := c.Score(id)
+	return exists
+}
+
+func (c *LessThan) Score(id key.Type) (int, bool) {
+	if score, exists := c.index.Score(id); exists && score < c.value {
 		return score, true
 	}
 	return 0, false

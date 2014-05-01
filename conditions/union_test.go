@@ -11,8 +11,7 @@ func TestUnionDoesNotContainANonExistantId(t *testing.T) {
 	union := NewUnion("x", []string{"apple", "orange"})
 	union.On(makeSetIndex(20, 23, 24, 25, 26))
 	union.On(makeSetIndex(20, 25, 28, 29))
-	_, exists := union.Contains(key.Type(22))
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(union.Contains(key.Type(22))).ToEqual(false)
 }
 
 func TestSetContainsAnExistingIdIfJustOneIndexContainsIt(t *testing.T) {
@@ -20,8 +19,7 @@ func TestSetContainsAnExistingIdIfJustOneIndexContainsIt(t *testing.T) {
 	union := NewUnion("x", []string{"apple", "orange"})
 	union.On(makeSetIndex(20, 23, 24, 25, 26))
 	union.On(makeSetIndex(20, 25, 28, 29))
-	_, exists := union.Contains(key.Type(24))
-	spec.Expect(exists).ToEqual(true)
+	spec.Expect(union.Contains(key.Type(24))).ToEqual(true)
 }
 
 func TestSetContainsAnExistingIdIfMultipleIndexesContainsIt(t *testing.T) {
@@ -29,6 +27,5 @@ func TestSetContainsAnExistingIdIfMultipleIndexesContainsIt(t *testing.T) {
 	union := NewUnion("x", []string{"apple", "orange"})
 	union.On(makeSetIndex(20, 23, 24, 25, 26))
 	union.On(makeSetIndex(20, 25, 28, 29))
-	_, exists := union.Contains(key.Type(20))
-	spec.Expect(exists).ToEqual(true)
+	spec.Expect(union.Contains(key.Type(20))).ToEqual(true)
 }

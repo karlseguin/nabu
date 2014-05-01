@@ -17,24 +17,21 @@ func TestLessThanOrEqualDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
 	lte := NewLessThanOrEqual("x", 10)
 	lte.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := lte.Contains(key.Type(22))
-
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(lte.Contains(key.Type(22))).ToEqual(false)
 }
 
 func TestLessThanOrEqualDoesNotContainAnIdWithAScoreGreaterThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
 	lte := NewLessThanOrEqual("x", 10)
 	lte.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := lte.Contains(key.Type(4))
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(lte.Contains(key.Type(4))).ToEqual(false)
 }
 
 func TestLessThanOrEqualContainsAnIdWithAScoreLessThanOrEqualOurTarget(t *testing.T) {
 	spec := gspec.New(t)
 	lte := NewLessThanOrEqual("x", 10)
 	lte.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	score, exists := lte.Contains(key.Type(2))
+	score, exists := lte.Score(key.Type(2))
 	spec.Expect(score).ToEqual(8)
 	spec.Expect(exists).ToEqual(true)
 }
@@ -43,6 +40,5 @@ func TestLessThanOrEqualContainAnIdWithAScoreEqualteoOurtarget(t *testing.T) {
 	spec := gspec.New(t)
 	lte := NewLessThanOrEqual("x", 10)
 	lte.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := lte.Contains(key.Type(3))
-	spec.Expect(exists).ToEqual(true)
+	spec.Expect(lte.Contains(key.Type(3))).ToEqual(true)
 }

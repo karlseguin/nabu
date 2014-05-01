@@ -18,39 +18,36 @@ func TestGreaterThanDoesNotContainANonExistantId(t *testing.T) {
 	spec := gspec.New(t)
 	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := gt.Contains(key.Type(22))
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(gt.Contains(key.Type(22))).ToEqual(false)
 }
 
 func TestGreaterThanDoesNotContainAnIdWithAScoreEqualToOurtarget(t *testing.T) {
 	spec := gspec.New(t)
 	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := gt.Contains(key.Type(3))
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(gt.Contains(key.Type(3))).ToEqual(false)
 }
 
 func TestGreaterThanDoesNotContainAnIdWithAScoreLessThanOurtarget(t *testing.T) {
 	spec := gspec.New(t)
 	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	_, exists := gt.Contains(key.Type(2))
-	spec.Expect(exists).ToEqual(false)
+	spec.Expect(gt.Contains(key.Type(2))).ToEqual(false)
 }
 
 func TestGreaterThanContainsAnIdWithAScoreGreaterThanOurTarget(t *testing.T) {
 	spec := gspec.New(t)
 	gt := NewGreaterThan("x", 10)
 	gt.On(makeIndex(1, 7, 8, 10, 11, 12, 13, 20))
-	score, exists := gt.Contains(key.Type(4))
+	score, exists := gt.Score(key.Type(4))
 	spec.Expect(score).ToEqual(11)
 	spec.Expect(exists).ToEqual(true)
 }
 
-func makeIndex(scores ...int) indexes.Index {
-	m := make(map[key.Type]int, len(scores))
-	for index, score := range scores {
-		m[key.Type(index)] = score
+func makeIndex(scores ...int) indexes.Ranked {
+	index := indexes.NewSortedInts("test")
+	for i, score := range scores {
+		index.SetInt(key.Type(i), score)
 	}
-	return indexes.LoadIndex("test", m)
+	return index
 }

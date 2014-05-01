@@ -11,7 +11,7 @@ type LessThanOrEqual struct {
 	indexName string
 	value     int
 	length    int
-	index     indexes.Index
+	index     indexes.Ranked
 }
 
 func NewLessThanOrEqual(indexName string, value int) *LessThanOrEqual {
@@ -32,7 +32,7 @@ func (c *LessThanOrEqual) IndexName() string {
 }
 
 func (c *LessThanOrEqual) On(index indexes.Index) {
-	c.index = index
+	c.index = index.(indexes.Ranked)
 }
 
 func (c *LessThanOrEqual) Range() (int, int) {
@@ -46,8 +46,13 @@ func (c *LessThanOrEqual) Len() int {
 	return c.length
 }
 
-func (c *LessThanOrEqual) Contains(id key.Type) (int, bool) {
-	if score, exists := c.index.Contains(id); exists && score <= c.value {
+func (c *LessThanOrEqual) Contains(id key.Type) bool {
+	_, exists := c.Score(id)
+	return exists
+}
+
+func (c *LessThanOrEqual) Score(id key.Type) (int, bool) {
+	if score, exists := c.index.Score(id); exists && score <= c.value {
 		return score, true
 	}
 	return 0, false

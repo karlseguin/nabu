@@ -6,8 +6,8 @@ import (
 	"github.com/karlseguin/nabu/key"
 )
 
-type Container interface {
-	Contains(id key.Type) (int, bool)
+type RankedContainer interface {
+	Score(id key.Type) (int, bool)
 }
 
 // A condition to apply to an index
@@ -16,12 +16,17 @@ type Condition interface {
 	Len() int
 	IndexName() string
 	On(index indexes.Index)
-	Contains(id key.Type) (int, bool)
-	Range() (int, int)
+	Contains(id key.Type) bool
 	CanIterate() bool
 	Iterator() indexes.Iterator
 	RLock()
 	RUnlock()
+}
+
+type RankedCondition interface {
+	Condition
+	RankedContainer
+	Range() (int, int)
 }
 
 type MultiCondition interface {

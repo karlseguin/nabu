@@ -30,8 +30,8 @@ type NormalQuery struct {
 	sortLength     int
 	conditionCount int
 	includeTotal   bool
-	sortCondition  Condition
-	sort           indexes.Index
+	sortCondition  RankedCondition
+	sort           indexes.Ranked
 	ranged         bool
 	conditions     Conditions
 }
@@ -69,7 +69,9 @@ func (q *NormalQuery) Union(indexName string, values ...string) Query {
 //
 func (q *NormalQuery) Where(condition Condition) Query {
 	if condition.IndexName() == q.sort.Name() {
-		q.sortCondition = condition
+		if ranked, ok := condition.(RankedCondition); ok {
+			q.sortCondition = ranked
+		}
 	} else {
 		q.addCondition(condition)
 	}
@@ -233,7 +235,7 @@ func (q *NormalQuery) findBySort() Result {
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 0; j < conditionCount; j++ {
-			if _, exists := q.conditions[j].Contains(id); exists == false {
+			if q.conditions[j].Contains(id) == false {
 				goto nomatchdesc
 			}
 		}
@@ -262,7 +264,7 @@ func (q *NormalQuery) findByIndex() Result {
 	conditionCount := q.conditionCount
 	result := <-q.db.unsortedResults
 
-	var sort Container
+	var sort RankedContainer
 	if q.sortCondition != nil {
 		q.sortCondition.On(q.sort)
 		sort = q.sortCondition
@@ -275,11 +277,11 @@ func (q *NormalQuery) findByIndex() Result {
 
 	for id := iterator.Current(); id != key.NULL; id = iterator.Next() {
 		for j := 1; j < conditionCount; j++ {
-			if _, exists := q.conditions[j].Contains(id); exists == false {
+			if q.conditions[j].Contains(id) == false {
 				goto nomatch
 			}
 		}
-		if score, exists := sort.Contains(id); exists {
+		if score, exists := sort.Score(id); exists {
 			result.add(id, score)
 		}
 	nomatch:

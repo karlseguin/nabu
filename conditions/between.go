@@ -12,7 +12,7 @@ type Between struct {
 	length    int
 	from      int
 	to        int
-	index     indexes.Index
+	index     indexes.Ranked
 }
 
 func NewBetween(indexName string, from, to int) *Between {
@@ -34,7 +34,7 @@ func (c *Between) IndexName() string {
 }
 
 func (c *Between) On(index indexes.Index) {
-	c.index = index
+	c.index = index.(indexes.Ranked)
 }
 
 func (c *Between) Range() (int, int) {
@@ -49,8 +49,13 @@ func (c *Between) Len() int {
 	return c.length
 }
 
-func (c *Between) Contains(id key.Type) (int, bool) {
-	if score, exists := c.index.Contains(id); exists && score >= c.from && score <= c.to {
+func (c *Between) Contains(id key.Type) bool {
+	_, exists := c.Score(id)
+	return exists
+}
+
+func (c *Between) Score(id key.Type) (int, bool) {
+	if score, exists := c.index.Score(id); exists && score >= c.from && score <= c.to {
 		return score, true
 	}
 	return 0, false

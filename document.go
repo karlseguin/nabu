@@ -26,16 +26,18 @@ type Meta struct {
 	IsUpdate bool
 	t        string
 
-	iIndexes map[string]int
-	sIndexes map[string]string
-	sets     map[string]struct{}
+	sortedInts     map[string]int
+	sortedStrings  map[string]string
+	setStrings     map[string]struct{}
+	bigSetStrings  map[string]struct{}
 }
 
 func newMeta(database *Database, isUpdate bool) *Meta {
 	return &Meta{
-		iIndexes: make(map[string]int),
-		sIndexes: make(map[string]string),
-		sets:     make(map[string]struct{}),
+		sortedInts:    make(map[string]int),
+		sortedStrings: make(map[string]string),
+		setStrings:    make(map[string]struct{}),
+		bigSetStrings: make(map[string]struct{}),
 		database: database,
 		IsUpdate: isUpdate,
 	}
@@ -65,19 +67,23 @@ func (m *Meta) getId() (key.Type, string) {
 }
 
 // Add an int-based index
-func (m *Meta) IndexInt(name string, score int) *Meta {
-	m.iIndexes[name] = score
+func (m *Meta) SortedInt(name string, score int) *Meta {
+	m.sortedInts[name] = score
 	return m
 }
 
 // Add an int-based index
-func (m *Meta) IndexString(name string, score string) *Meta {
-	m.sIndexes[name] = score
+func (m *Meta) SortedString(name string, score string) *Meta {
+	m.sortedStrings[name] = score
 	return m
 }
 
-func (m *Meta) Set(name, value string) *Meta {
-	fullName := name + "=" + value
-	m.sets[fullName] = struct{}{}
-	return m.IndexInt(fullName, 0)
+func (m *Meta) Set(name, value string, big bool) *Meta {
+	name = name + "=" + value
+	if big {
+		m.bigSetStrings[name] = struct{}{}
+	} else {
+		m.setStrings[name] = struct{}{}
+	}
+	return m
 }

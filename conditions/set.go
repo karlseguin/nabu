@@ -9,7 +9,7 @@ type Set struct {
 	key       string
 	indexName string
 	value     string
-	index     indexes.Index
+	index     indexes.Iterable
 }
 
 func NewSet(indexName string, value string) *Set {
@@ -29,7 +29,7 @@ func (c *Set) IndexName() string {
 }
 
 func (c *Set) On(index indexes.Index) {
-	c.index = index
+	c.index = index.(indexes.Iterable)
 }
 
 func (c *Set) Range() (int, int) {
@@ -40,11 +40,8 @@ func (c *Set) Len() int {
 	return c.index.Len()
 }
 
-func (c *Set) Contains(id key.Type) (int, bool) {
-	if score, exists := c.index.Contains(id); exists {
-		return score, true
-	}
-	return 0, false
+func (c *Set) Contains(id key.Type) bool {
+	return c.index.Contains(id)
 }
 
 func (c *Set) CanIterate() bool {

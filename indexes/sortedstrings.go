@@ -9,7 +9,7 @@ import (
 
 var NullSortedItem = &SortedItem{0, key.NULL, ""}
 
-type SortedSet struct {
+type SortedStrings struct {
 	name      string
 	list      []*SortedItem
 	lock      sync.RWMutex
@@ -23,23 +23,23 @@ type SortedItem struct {
 	score string
 }
 
-func newSortedSet(name string) *SortedSet {
-	return &SortedSet{
+func NewSortedStrings(name string) *SortedStrings {
+	return &SortedStrings{
 		name:   name,
 		list:   []*SortedItem{NullSortedItem, NullSortedItem},
 		lookup: make(map[key.Type]*SortedItem),
 	}
 }
 
-func (s *SortedSet) Name() string {
+func (s *SortedStrings) Name() string {
 	return s.name
 }
 
-func (s *SortedSet) Len() int {
+func (s *SortedStrings) Len() int {
 	return len(s.lookup)
 }
 
-func (s *SortedSet) BulkLoad(ids []key.Type) {
+func (s *SortedStrings) BulkLoad(ids []key.Type) {
 	list := make([]*SortedItem, len(ids)+2)
 	lookup := make(map[key.Type]*SortedItem, len(ids))
 	list[0] = NullSortedItem
@@ -55,11 +55,15 @@ func (s *SortedSet) BulkLoad(ids []key.Type) {
 	s.lock.Unlock()
 }
 
-func (s *SortedSet) SetInt(id key.Type, score int) {
-	panic("Cannot call SetInt on sortedset")
+func (s *SortedStrings) Set(id key.Type) {
+	s.SetString(id, "")
 }
 
-func (s *SortedSet) SetString(id key.Type, score string) {
+func (s *SortedStrings) SetInt(id key.Type, score int) {
+	s.SetString(id, "")
+}
+
+func (s *SortedStrings) SetString(id key.Type, score string) {
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
 	current, exists := s.lookup[id]
@@ -89,7 +93,7 @@ func (s *SortedSet) SetString(id key.Type, score string) {
 	s.lock.Unlock()
 }
 
-func (s *SortedSet) Remove(id key.Type) {
+func (s *SortedStrings) Remove(id key.Type) {
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
 	current, exists := s.lookup[id]
@@ -98,7 +102,7 @@ func (s *SortedSet) Remove(id key.Type) {
 	}
 }
 
-func (s *SortedSet) remove(item *SortedItem) {
+func (s *SortedStrings) remove(item *SortedItem) {
 	length := int64(len(s.list)) - 1
 	list := make([]*SortedItem, length)
 	copy(list, s.list[:item.rank])
@@ -114,62 +118,67 @@ func (s *SortedSet) remove(item *SortedItem) {
 	s.lock.Unlock()
 }
 
-func (s *SortedSet) Contains(id key.Type) (int, bool) {
+func (s *SortedStrings) Contains(id key.Type) bool {
+		_, exists := s.lookup[id]
+		return exists
+}
+
+func (s *SortedStrings) Score(id key.Type) (int, bool) {
 	if item, exists := s.lookup[id]; exists {
 		return int(item.rank), exists
 	}
 	return 0, false
 }
 
-func (s *SortedSet) GetRank(score int, first bool) int {
+func (s *SortedStrings) GetRank(score int, first bool) int {
 	return 0
 }
 
-func (s *SortedSet) RLock() {
+func (s *SortedStrings) RLock() {
 	s.lock.RLock()
 }
 
-func (s *SortedSet) RUnlock() {
+func (s *SortedStrings) RUnlock() {
 	s.lock.RUnlock()
 }
 
 // Returns a forward iterator
-func (s *SortedSet) Forwards() Iterator {
+func (s *SortedStrings) Forwards() Iterator {
 	s.lock.RLock()
-	return &SortedSetForwardIterator{
+	return &SortedStringsForwardIterator{
 		position: 1,
 		set:      s,
 	}
 }
 
 // Returns a backward iterator
-func (s *SortedSet) Backwards() Iterator {
+func (s *SortedStrings) Backwards() Iterator {
 	s.lock.RLock()
-	return &SortedSetBackwardIterator{
+	return &SortedStringsBackwardIterator{
 		position: s.Len(),
 		set:      s,
 	}
 }
 
 // Forward iterator through a static sort index
-type SortedSetForwardIterator struct {
+type SortedStringsForwardIterator struct {
 	position int
-	set      *SortedSet
+	set      *SortedStrings
 }
 
 // Moves forward and gets the value
-func (i *SortedSetForwardIterator) Next() key.Type {
+func (i *SortedStringsForwardIterator) Next() key.Type {
 	i.position++
 	return i.Current()
 }
 
 // Gets the value
-func (i *SortedSetForwardIterator) Current() key.Type {
+func (i *SortedStringsForwardIterator) Current() key.Type {
 	return i.set.list[i.position].id
 }
 
 // Sets the iterators offset
-func (i *SortedSetForwardIterator) Offset(offset int) Iterator {
+func (i *SortedStringsForwardIterator) Offset(offset int) Iterator {
 	// consider the 2 padding values
 	if offset > len(i.set.list)-2 {
 		i.position = 0 //the padded head will break the loop
@@ -180,34 +189,34 @@ func (i *SortedSetForwardIterator) Offset(offset int) Iterator {
 }
 
 // Panics. Ranged queries aren't supported on static sort indexes
-func (i *SortedSetForwardIterator) Range(from, to int) Iterator {
+func (i *SortedStringsForwardIterator) Range(from, to int) Iterator {
 	panic("Cannot have a ranged query on a sortedset")
 }
 
 // Releases the iterator
-func (i *SortedSetForwardIterator) Close() {
+func (i *SortedStringsForwardIterator) Close() {
 	i.set.lock.RUnlock()
 }
 
 // Backward iterator through a static sort index
-type SortedSetBackwardIterator struct {
+type SortedStringsBackwardIterator struct {
 	position int
-	set      *SortedSet
+	set      *SortedStrings
 }
 
 // Moves backward and gets the value
-func (i *SortedSetBackwardIterator) Next() key.Type {
+func (i *SortedStringsBackwardIterator) Next() key.Type {
 	i.position--
 	return i.Current()
 }
 
 // Gets the value
-func (i *SortedSetBackwardIterator) Current() key.Type {
+func (i *SortedStringsBackwardIterator) Current() key.Type {
 	return i.set.list[i.position].id
 }
 
 // Sets the iterators offset
-func (i *SortedSetBackwardIterator) Offset(offset int) Iterator {
+func (i *SortedStringsBackwardIterator) Offset(offset int) Iterator {
 	// consider the 2 padding values
 	if offset >= len(i.set.list)-2 {
 		i.position = 0 //the padded head will break the loop
@@ -218,11 +227,11 @@ func (i *SortedSetBackwardIterator) Offset(offset int) Iterator {
 }
 
 // Panics. Ranged queries aren't supported on static sort indexes
-func (i *SortedSetBackwardIterator) Range(from, to int) Iterator {
+func (i *SortedStringsBackwardIterator) Range(from, to int) Iterator {
 	panic("Cannot have a ranged query on a sortedset")
 }
 
 // Releases the iterator
-func (i *SortedSetBackwardIterator) Close() {
+func (i *SortedStringsBackwardIterator) Close() {
 	i.set.lock.RUnlock()
 }
