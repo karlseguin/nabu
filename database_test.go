@@ -51,6 +51,18 @@ func TestInsertANewDocumentWithAStringId(t *testing.T) {
 	spec.Expect(db.indexes["age"].Contains(1)).ToEqual(true)
 }
 
+func TestGetMultipleDocuments(t *testing.T) {
+	spec := gspec.New(t)
+	db := SmallDB()
+	defer db.Close()
+	db.Update(NewStringDoc("XX", map[string]int{"trending": 1, "age": 3}))
+	db.Update(NewStringDoc("XY", map[string]int{"trending": 2, "age": 4}))
+	documents := db.StringGets([]string{"XX", "XY", "ZZ"})
+	spec.Expect(len(documents)).ToEqual(2)
+	spec.Expect(documents[0].(*StringDoc).id).ToEqual("XX")
+	spec.Expect(documents[1].(*StringDoc).id).ToEqual("XY")
+}
+
 func TestUpdatesADocument(t *testing.T) {
 	spec := gspec.New(t)
 	db := SmallDB()

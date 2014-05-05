@@ -135,6 +135,20 @@ func (d *Database) StringGet(id string) Document {
 	return d.get(typed)
 }
 
+// Retrieves an array of documents
+func (d *Database) StringGets(ids []string) []Document {
+	documents := make([]Document, len(ids))
+	index := 0
+	for _, id := range ids {
+		typed := d.idMap.get(id, false)
+		if typed != key.NULL {
+			documents[index] = d.get(typed)
+			index += 1
+		}
+	}
+	return documents[:index]
+}
+
 // Inserts or updates the document
 func (d *Database) Update(doc Document) {
 	if doc == nil {
