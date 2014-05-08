@@ -89,7 +89,7 @@ func (r *UnsortedResult) finalize(q *NormalQuery) *UnsortedResult {
 		from := q.offset
 		to := r.found
 		if to > q.limit+from {
-			to = q.limit
+			to = from+q.limit
 		}
 		if from > to {
 			r.found = 0
@@ -98,6 +98,7 @@ func (r *UnsortedResult) finalize(q *NormalQuery) *UnsortedResult {
 			r.found = to - from
 		}
 	}
+
 	r.hasMore = r.found != 0 && r.total > (q.offset+r.found)
 	if q.includeTotal == false {
 		r.total = -1
