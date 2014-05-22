@@ -399,6 +399,32 @@ func TestQueryWithUnion(t *testing.T) {
 	assertResult(t, result, 1, 2, 3, 4)
 }
 
+// Dynamic Sort
+func TestQueryWithDynamicSort(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7)
+	result := db.DynamicQuery([]uint{2,3,5,6}).Execute()
+	assertResult(t, result, 2,3,5,6)
+}
+
+func TestQueryWithDynamicSortAndFilter(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+	result := db.DynamicQuery([]uint{2,3,5,6,9,10}).Where(GT("created", 5)).Execute()
+	assertResult(t, result, 6,9,10)
+}
+
+
+func TestQueryWithDynamicSortWithPaging(t *testing.T) {
+	db := New(SmallConfig())
+	db.Close()
+	makeIndex(db, "created", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+	result := db.DynamicQuery([]uint{2,3,5,6,9,10}).Offset(2).Limit(2).Execute()
+	assertResult(t, result, 5,6)
+}
+
 func assertResult(t *testing.T, result Result, expected ...uint) {
 	actual := result.Ids()
 	if len(actual) != len(expected) {

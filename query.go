@@ -32,6 +32,7 @@ type NormalQuery struct {
 	includeTotal   bool
 	sortCondition  RankedCondition
 	sort           indexes.Ranked
+	dynamicSort    []uint
 	ranged         bool
 	conditions     Conditions
 }
@@ -68,7 +69,7 @@ func (q *NormalQuery) Union(indexName string, values ...string) Query {
 //    Where(nabu.GT("age", 10))
 //
 func (q *NormalQuery) Where(condition Condition) Query {
-	if condition.IndexName() == q.sort.Name() {
+	if q.sort != nil && condition.IndexName() == q.sort.Name() {
 		if ranked, ok := condition.(RankedCondition); ok {
 			q.sortCondition = ranked
 		}
@@ -134,6 +135,13 @@ func (q *NormalQuery) IncludeTotal() Query {
 // once you are done with it
 func (q *NormalQuery) Execute() Result {
 	defer q.reset()
+	conditionCount := q.conditionCount
+
+	if q.dynamicSort != nil {
+		q.prepareConditions()
+		defer q.conditions[:conditionCount].RUnlock()
+		return q.findFromDynamicSort()
+	}
 
 	q.sort.RLock()
 	if q.sortCondition != nil {
@@ -144,7 +152,6 @@ func (q *NormalQuery) Execute() Result {
 	}
 	q.sort.RUnlock()
 
-	conditionCount := q.conditionCount
 	if conditionCount == 0 {
 		return q.findWithNoIndexes()
 	}
@@ -212,6 +219,37 @@ func (q *NormalQuery) findWithNoIndexes() Result {
 		if result.total > q.upto {
 			result.total = q.upto
 		}
+	}
+	return result
+}
+
+func (q *NormalQuery) findFromDynamicSort() Result {
+	found := 0
+	limit := q.limit
+	conditionCount := q.conditionCount
+	result := <-q.db.sortedResults
+
+	for _, id := range q.dynamicSort {
+		keyd := key.Type(id)
+		for j := 0; j < conditionCount; j++ {
+			if q.conditions[j].Contains(keyd) == false {
+				goto nomatchdesc
+			}
+		}
+		result.total++
+		if result.total > q.offset {
+			if found < limit {
+				result.add(keyd)
+				found++
+			} else if result.total >= q.upto {
+				break
+			}
+		}
+	nomatchdesc:
+	}
+	result.hasMore = result.total > (q.offset + q.limit)
+	if q.includeTotal == false {
+		result.total = -1
 	}
 	return result
 }
@@ -295,10 +333,11 @@ func (q *NormalQuery) reset() {
 	q.offset = 0
 	q.cache = true
 	q.desc = false
-	q.conditionCount = 0
 	q.ranged = false
-	q.includeTotal = false
+	q.dynamicSort = nil
+	q.conditionCount = 0
 	q.sortCondition = nil
+	q.includeTotal = false
 	q.limit = q.db.defaultLimit
 	q.upto = q.db.defaultLimit + 1
 	q.db.queryPool <- q

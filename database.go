@@ -121,6 +121,13 @@ func (d *Database) Query(indexName string) Query {
 	return q
 }
 
+// Generate a DynamicQuery for the specified ids
+func (d *Database) DynamicQuery(ids []uint) Query {
+	q := <-d.queryPool
+	q.dynamicSort = ids
+	return q
+}
+
 // Retrieves a document by id
 func (d *Database) Get(id uint) Document {
 	return d.get(key.Type(id))
