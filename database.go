@@ -53,7 +53,6 @@ type Database struct {
 	loading bool
 	*Configuration
 	queryPool       chan *NormalQuery
-	buckets         map[int]*Bucket
 	dStorage        storage.Storage
 	mStorage        storage.Storage
 	indexLock       sync.RWMutex
@@ -61,6 +60,7 @@ type Database struct {
 	sortedResults   chan *SortedResult
 	indexes         map[string]indexes.Index
 	unsortedResults chan *UnsortedResult
+	Buckets         map[int]*Bucket
 }
 
 // Creates a new Database instance. Unless configured to SkipLoad, data from
@@ -70,7 +70,7 @@ func New(c *Configuration) *Database {
 		Configuration:   c,
 		indexes:         make(map[string]indexes.Index),
 		queryPool:       make(chan *NormalQuery, c.queryPoolSize),
-		buckets:         make(map[int]*Bucket, c.bucketCount),
+		Buckets:         make(map[int]*Bucket, c.bucketCount),
 		sortedResults:   make(chan *SortedResult, c.sortedResultPoolSize),
 		unsortedResults: make(chan *UnsortedResult, c.unsortedResultPoolSize),
 		idMap:           newIdMap(),
@@ -84,7 +84,7 @@ func New(c *Configuration) *Database {
 	}
 
 	for i := 0; i < int(c.bucketCount); i++ {
-		db.buckets[i] = &Bucket{lookup: make(map[key.Type]Document)}
+		db.Buckets[i] = &Bucket{Lookup: make(map[key.Type]Document)}
 	}
 	for i := 0; i < c.queryPoolSize; i++ {
 		newQuery(db) //it automatically enqueues itself
@@ -161,8 +161,8 @@ func (d *Database) Update(doc Document) {
 	id, stringId := meta.getId()
 	bucket := d.getBucket(id)
 	bucket.Lock()
-	old, isUpdate := bucket.lookup[id]
-	bucket.lookup[id] = doc
+	old, isUpdate := bucket.Lookup[id]
+	bucket.Lookup[id] = doc
 	bucket.Unlock()
 
 	oldMeta := newMeta(d, false)
@@ -231,7 +231,7 @@ func (d *Database) Remove(doc Document) {
 	}
 	bucket := d.getBucket(id)
 	bucket.Lock()
-	delete(bucket.lookup, id)
+	delete(bucket.Lookup, id)
 	bucket.Unlock()
 
 	if d.loading == false {
@@ -296,12 +296,12 @@ func (d *Database) get(id key.Type) Document {
 	bucket := d.getBucket(id)
 	bucket.RLock()
 	defer bucket.RUnlock()
-	return bucket.lookup[id]
+	return bucket.Lookup[id]
 }
 
 // Gets the document's bucket
 func (d *Database) getBucket(key key.Type) *Bucket {
-	return d.buckets[key.Bucket(d.bucketCount)]
+	return d.Buckets[key.Bucket(d.bucketCount)]
 }
 
 func (d *Database) getIndex(name string) (indexes.Index, bool) {

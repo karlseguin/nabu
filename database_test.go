@@ -18,9 +18,9 @@ func TestDatabaseIsInitializedBasedOnConfiguration(t *testing.T) {
 	spec.Expect(len(db.queryPool)).ToEqual(2)
 	spec.Expect(len(db.sortedResults)).ToEqual(6)
 	spec.Expect(len(db.unsortedResults)).ToEqual(7)
-	spec.Expect(len(db.buckets)).ToEqual(8)
+	spec.Expect(len(db.Buckets)).ToEqual(8)
 	for i := 0; i < 8; i++ {
-		spec.Expect(db.buckets[i]).ToNotBeNil()
+		spec.Expect(db.Buckets[i]).ToNotBeNil()
 	}
 
 	query := db.Query("x").(*NormalQuery)

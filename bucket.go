@@ -9,5 +9,5 @@ import (
 // concurrency
 type Bucket struct {
 	sync.RWMutex
-	lookup map[key.Type]Document
+	Lookup map[key.Type]Document
 }
