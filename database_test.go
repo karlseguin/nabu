@@ -135,6 +135,17 @@ func TestBulkLoadsAnExistingSortedSet(t *testing.T) {
 	spec.Expect(db.indexes["new"].Contains(db.idMap.get("c", false))).ToEqual(false)
 }
 
+func TestContains(t *testing.T) {
+	spec := gspec.New(t)
+	db := SmallDB()
+	defer db.Close()
+	doc := NewDoc(94, map[string]int{"trending": 10, "age": 2})
+	db.Update(doc)
+	spec.Expect(db.Contains("trending", 20)).ToEqual(false)
+	spec.Expect(db.Contains("other", 94)).ToEqual(false)
+	spec.Expect(db.Contains("trending", 94)).ToEqual(true)
+}
+
 type Doc struct {
 	id      uint
 	indexes map[string]int

@@ -128,6 +128,18 @@ func (d *Database) DynamicQuery(ids []uint) Query {
 	return q
 }
 
+func (d *Database) Contains(indexName string, id uint) bool {
+	d.indexLock.RLock()
+	index, exists := d.indexes[indexName].(indexes.Index)
+	d.indexLock.RUnlock()
+	if exists == false {
+		return false
+	}
+	index.RLock()
+	defer index.RUnlock()
+	return index.Contains(key.Type(id))
+}
+
 // Retrieves a document by id
 func (d *Database) Get(id uint) Document {
 	return d.get(key.Type(id))
