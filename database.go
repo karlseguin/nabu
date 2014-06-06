@@ -128,7 +128,18 @@ func (d *Database) DynamicQuery(ids []uint) Query {
 	return q
 }
 
+func (d *Database) StringContains(indexName string, id string) bool {
+	typed := d.idMap.get(id, false)
+	if typed == key.NULL {
+		return false
+	}
+	return d.KeyContains(indexName, typed)
+}
+
 func (d *Database) Contains(indexName string, id uint) bool {
+	return d.KeyContains(indexName, key.Type(id))
+}
+func (d *Database) KeyContains(indexName string, id key.Type) bool {
 	d.indexLock.RLock()
 	index, exists := d.indexes[indexName].(indexes.Index)
 	d.indexLock.RUnlock()
