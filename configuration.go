@@ -27,7 +27,7 @@ func Configure() *Configuration {
 		skipLoad:               false,
 		bucketCount:            25,
 		defaultLimit:           10,
-		dbPath:                 "./data/",
+		dbPath:                 "data.db",
 		queryPoolSize:          512,
 		maxUnsortedSize:        5000,
 		maxConditionsPerQuery:  10,

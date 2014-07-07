@@ -9,26 +9,21 @@ type Storage interface {
 	Close() error
 
 	// Removes a document
-	Remove(id []byte)
+	RemoveDocument(id []byte)
+	RemoveMapping(id string)
 
 	// Inserts or updates a document
-	Put(id, value []byte)
+	PutDocument(id, value []byte)
+	PutMapping(id string, value []byte)
 
-	// Returns an iterator used to load all documents
-	Iterator() Iterator
-}
-
-// Iterator to loop through all persisted key=>values
-type Iterator interface {
-	Close()
-	Next() bool
-	Error() error
-	Current() ([]byte, []byte)
+	// Iterate through all rows
+	IterateDocuments(handler func(id, value []byte))
+	IterateMappings(handler func(id string, value []byte))
 }
 
 // Creates a new storage isntance
 func New(path string) Storage {
-	return newLeveldb(path)
+	return newSQLite(path)
 }
 
 type nullStorage struct {
@@ -38,14 +33,10 @@ func (s *nullStorage) Close() error {
 	return nil
 }
 
-func (s *nullStorage) Remove(id []byte) {
+func (s *nullStorage) RemoveDocument(id []byte) {}
+func (s *nullStorage) RemoveMapping(id string) {}
+func (s *nullStorage) PutDocument(id, value []byte) {}
+func (s *nullStorage) PutMapping(id string, value []byte) {}
 
-}
-
-func (s *nullStorage) Put(id, value []byte) {
-
-}
-
-func (s *nullStorage) Iterator() Iterator {
-	return nil
-}
+func (s *nullStorage) IterateDocuments(handler func(id, value []byte)){}
+func (s *nullStorage) IterateMappings(handler func(id string, value []byte)){}

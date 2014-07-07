@@ -53,8 +53,7 @@ type Database struct {
 	loading bool
 	*Configuration
 	queryPool       chan *NormalQuery
-	dStorage        storage.Storage
-	mStorage        storage.Storage
+	storage         storage.Storage
 	indexLock       sync.RWMutex
 	idMap           *IdMap
 	sortedResults   chan *SortedResult
@@ -76,11 +75,9 @@ func New(c *Configuration) *Database {
 		idMap:           newIdMap(),
 	}
 	if c.persist || c.skipLoad == false {
-		db.dStorage = storage.New(c.dbPath + "documents")
-		db.mStorage = storage.New(c.dbPath + "idmap")
+		db.storage = storage.New(c.dbPath)
 	} else {
-		db.dStorage = storage.NullStorage
-		db.mStorage = storage.NullStorage
+		db.storage = storage.NullStorage
 	}
 
 	for i := 0; i < int(c.bucketCount); i++ {
@@ -99,10 +96,8 @@ func New(c *Configuration) *Database {
 	if c.skipLoad == false {
 		db.restore()
 		if c.persist == false {
-			db.dStorage.Close()
-			db.mStorage.Close()
-			db.dStorage = storage.NullStorage
-			db.mStorage = storage.NullStorage
+			db.storage.Close()
+			db.storage = storage.NullStorage
 		}
 	}
 	return db
@@ -234,9 +229,9 @@ func (d *Database) Update(doc Document) {
 	if d.loading == false && d.persist {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
-		d.dStorage.Put(idBuffer.Bytes(), serializeValue(meta.t, doc))
+		d.storage.PutDocument(idBuffer.Bytes(), serializeValue(meta.t, doc))
 		if len(stringId) != 0 {
-			d.mStorage.Put([]byte(stringId), idBuffer.Bytes())
+			d.storage.PutMapping(stringId, idBuffer.Bytes())
 		}
 	}
 }
@@ -267,10 +262,10 @@ func (d *Database) Remove(doc Document) {
 	if d.loading == false {
 		idBuffer := id.Serialize()
 		defer idBuffer.Close()
-		d.dStorage.Remove(idBuffer.Bytes())
+		d.storage.RemoveDocument(idBuffer.Bytes())
 		if len(stringId) != 0 {
 			d.idMap.remove(stringId)
-			d.mStorage.Remove([]byte(stringId))
+			d.storage.RemoveMapping(stringId)
 		}
 	}
 }
@@ -292,12 +287,7 @@ func (d *Database) RemoveByStringId(id string) {
 
 // Closes the database
 func (d *Database) Close() error {
-	derr := d.dStorage.Close()
-	merr := d.mStorage.Close()
-	if derr != nil {
-		return derr
-	}
-	return merr
+	return d.storage.Close()
 }
 
 func (d *Database) BulkLoadSortedString(name string, ids []string) {
@@ -346,37 +336,22 @@ func (d *Database) restore() {
 	d.loading = true
 
 	if d.iFactory != nil {
-		iter := d.dStorage.Iterator()
-		for iter.Next() {
-			id, typedValue := iter.Current()
-			t, value := deserializeValue(typedValue)
+		d.storage.IterateDocuments(func(id, byteValue []byte){
+			t, value := deserializeValue(byteValue)
 			d.Update(d.iFactory(key.Deserialize(id), t, value))
-		}
-		iter.Close()
+		})
 	} else {
 		lookup := make(map[uint]string)
-		iter := d.mStorage.Iterator()
-		for iter.Next() {
-			stringId, id := iter.Current()
+		d.storage.IterateMappings(func(stringId string, id []byte){
 			lookup[key.Deserialize(id)] = string(stringId)
-		}
-		iter.Close()
-		if err := iter.Error(); err != nil {
-			log.Println(err)
-		}
+		})
 		d.idMap.load(lookup)
 
-		iter = d.dStorage.Iterator()
-		for iter.Next() {
-			rawId, typedValue := iter.Current()
+		d.storage.IterateDocuments(func(rawId, byteValue []byte){
 			id := key.Deserialize(rawId)
-			t, value := deserializeValue(typedValue)
+			t, value := deserializeValue(byteValue)
 			d.Update(d.sFactory(lookup[id], id, t, value))
-		}
-		iter.Close()
-		if err := iter.Error(); err != nil {
-			log.Println(err)
-		}
+		})
 	}
 	d.loading = false
 }
@@ -410,18 +385,19 @@ func serializeValue(t string, value interface{}) []byte {
 	if err != nil {
 		panic(err)
 	}
-	bt := []byte(t)
-	l := len(bt)
-	final := make([]byte, 1+l+len(serialized))
-	final[0] = byte(l)
-	copy(final[1:], bt)
-	copy(final[l+1:], serialized)
+	if len(t) == 0 {
+		return serialized
+	}
+	bt := []byte(t + "|")
+	final := make([]byte, len(serialized)+len(bt))
+	copy(final, bt)
+	copy(final[len(bt)+1:], serialized)
 	return final
 }
 
 // Deserialize type  + value from the storage engine
 func deserializeValue(data []byte) (string, []byte) {
-	index := bytes.Index(data, []byte{'|'})
+	index := bytes.Index(data[:32], []byte{'|'})
 	if index == -1 {
 		return "", data
 	}
