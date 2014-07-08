@@ -3,7 +3,6 @@ package storage
 import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
-	"fmt"
 )
 
 type SQLite struct {
@@ -38,7 +37,6 @@ func newSQLite(path string) *SQLite {
 func (db *SQLite) PutDocument(id, value []byte) {
 	result, _ := db.Exec("update documents set value = ? where id = ?", id, value)
 	if c, _ := result.RowsAffected(); c == 0 {
-		fmt.Println(id, string(id))
 		db.Exec("insert into documents (id, value) values (?, ?)", id, value)
 	}
 }
